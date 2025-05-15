@@ -1,198 +1,118 @@
 import React, { useEffect, useRef } from 'react';
-import { createPluginUI } from 'molstar/lib/mol-plugin-ui';
-import { renderReact18 } from 'molstar/lib/mol-plugin-ui/react18';
-import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
-import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
-import { Asset } from 'molstar/lib/mol-util/assets';
-import { PluginConfig } from 'molstar/lib/mol-plugin/config';
+import { MolstarViewerProps } from './types';
+import { useMolstar } from './MolstarContext';
 import 'molstar/lib/mol-plugin-ui/skin/light.scss';
 
-interface MolstarViewerProps {
-  width?: number | string;
-  height?: number | string;
-  pdbUrl?: string;
-  mvsData?: any;
-  options?: {
-    hideControls?: boolean;
-    hideToolbar?: boolean;
-    hidSequence?: boolean;
-  };
-}
-
-// Maintain a single global plugin instance
-let globalPlugin: PluginUIContext | null = null;
-
+/**
+ * A React component that displays a molecular structure using the Molstar library.
+ * This is a presentational component that renders the viewer container.
+ * It expects to be within a MolstarProvider context.
+ */
 const MolstarViewer: React.FC<MolstarViewerProps> = ({
   width = '100%',
   height = '100%',
   pdbUrl,
   mvsData,
-  options = {}
+  options = {},
+  onStructureLoaded,
+  onError
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const prevPdbUrlRef = useRef(pdbUrl);
-  const prevMvsDataRef = useRef(mvsData);
+  const { loading, error, loadPdbStructure, loadMvsData, isInitialized, initializePlugin } = useMolstar();
   
-  // Create or initialize plugin on mount
+  // Initialize plugin when the component mounts
   useEffect(() => {
-    // Make sure container exists
+    console.log('MolstarViewer: Initialize plugin effect', { pdbUrl, mvsData });
     if (!containerRef.current) return;
     
-    const container = containerRef.current;
-    
-    // Create a separate div inside the container for the plugin
-    const pluginContainer = document.createElement('div');
-    pluginContainer.style.width = '100%';
-    pluginContainer.style.height = '100%';
-    
-    // Clear container and append the plugin container
-    container.innerHTML = '';
-    container.appendChild(pluginContainer);
-    
-    // Initialize plugin
-    const initPlugin = async () => {
-      // Clean up existing plugin if needed
-      if (globalPlugin) {
-        globalPlugin.dispose();
-        globalPlugin = null;
-      }
-      
-      // Create spec
-      const spec = DefaultPluginUISpec();
-      spec.config = [
-        [PluginConfig.Viewport.ShowExpand, !options.hideControls],
-        [PluginConfig.Viewport.ShowControls, !options.hideControls],
-        [PluginConfig.Viewport.ShowSelectionMode, !options.hideControls],
-        [PluginConfig.Viewport.ShowAnimation, !options.hideControls],
-      ];
-      
-      try {
-        // Initialize plugin with required render function
-        globalPlugin = await createPluginUI({
-          target: pluginContainer,
-          render: renderReact18,
-          spec
-        });
-        
-        // Load data
-        if (mvsData) {
-          loadMVSData(mvsData);
-        } else if (pdbUrl) {
-          loadPDBData(pdbUrl);
+    // This div will host the Molstar plugin
+    const pluginContainer = containerRef.current;
+    let mounted = true;
+
+    // Initialize the plugin with the container element
+    initializePlugin(pluginContainer)
+      .then(() => {
+        if (mounted) {
+          console.log('MolstarViewer: Plugin initialized successfully');
         }
-      } catch (error) {
-        console.error('Error initializing plugin:', error);
-      }
-    };
+      })
+      .catch(err => {
+        if (mounted) {
+          console.error('Failed to initialize Molstar plugin:', err);
+          if (onError) onError(err instanceof Error ? err : new Error('Failed to initialize plugin'));
+        }
+      });
     
-    initPlugin();
-    
-    // Cleanup on unmount
+    // Cleanup when component unmounts - just mark as unmounted, don't try to dispose
     return () => {
-      if (globalPlugin) {
-        globalPlugin.dispose();
-        globalPlugin = null;
-      }
-      if (container) {
-        container.innerHTML = '';
-      }
+      console.log('MolstarViewer: Cleaning up component');
+      mounted = false;
     };
-  }, []); // Only run on mount
+  }, [initializePlugin, onError, pdbUrl, mvsData]);
   
-  // Handle prop changes
+  // Load data when props change
   useEffect(() => {
-    // Skip if plugin not initialized or no real changes
-    if (!globalPlugin || 
-        (pdbUrl === prevPdbUrlRef.current && mvsData === prevMvsDataRef.current)) {
+    console.log('MolstarViewer: Load data effect', { pdbUrl, mvsData, isInitialized: isInitialized() });
+    if (!isInitialized()) {
+      console.log('MolstarViewer: Plugin not initialized yet, skipping data load');
       return;
     }
     
-    // Update data based on props
-    const updateData = async () => {
-      if (mvsData) {
-        loadMVSData(mvsData);
-      } else if (pdbUrl) {
-        loadPDBData(pdbUrl);
+    const loadData = async () => {
+      console.log('MolstarViewer: Loading data', { pdbUrl, mvsData });
+      try {
+        if (mvsData) {
+          console.log('MolstarViewer: Loading MVS data');
+          await loadMvsData(mvsData);
+          console.log('MolstarViewer: MVS data loaded successfully');
+          if (onStructureLoaded) onStructureLoaded();
+        } else if (pdbUrl) {
+          console.log('MolstarViewer: Loading PDB structure from URL', pdbUrl);
+          await loadPdbStructure(pdbUrl);
+          console.log('MolstarViewer: PDB structure loaded successfully');
+          if (onStructureLoaded) onStructureLoaded();
+        } else {
+          console.log('MolstarViewer: No data to load');
+        }
+      } catch (err) {
+        console.error('MolstarViewer: Error loading data', err);
+        if (onError) {
+          onError(err instanceof Error ? err : new Error('Failed to load data'));
+        }
       }
     };
     
-    updateData();
-    
-    // Update previous values
-    prevPdbUrlRef.current = pdbUrl;
-    prevMvsDataRef.current = mvsData;
-  }, [pdbUrl, mvsData]);
+    loadData();
+  }, [pdbUrl, mvsData, loadPdbStructure, loadMvsData, isInitialized, onStructureLoaded, onError]);
   
-  // Load PDB data
-  const loadPDBData = async (url: string | undefined) => {
-    if (!globalPlugin || !url) return;
-    
-    try {
-      // Clear previous data
-      await globalPlugin.clear();
-      
-      // Load structure
-      const data = await globalPlugin.builders.data.download({
-        url: Asset.Url(url)
-      });
-      
-      // Determine format based on extension
-      const format = url.endsWith('.pdb') 
-        ? 'pdb' 
-        : url.endsWith('.cif') || url.endsWith('.mmcif') 
-          ? 'mmcif' 
-          : 'mmcif';
-      
-      // Parse and display
-      const trajectory = await globalPlugin.builders.structure.parseTrajectory(data, format);
-      await globalPlugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
-    } catch (error) {
-      console.error('Error loading PDB data:', error);
-    }
-  };
-  
-  // Load MVS data
-  const loadMVSData = async (data: any) => {
-    if (!globalPlugin) return;
-    
-    try {
-      // Clear previous data
-      await globalPlugin.clear();
-      
-      // Try to use PDB URL from MVS data if available
-      try {
-        const pdbUrl = data?.tree?.structure?.cell?.props?.source?.params?.url;
-        if (pdbUrl && typeof pdbUrl === 'string') {
-          await loadPDBData(pdbUrl);
-          return;
-        }
-      } catch (e) {
-        console.warn('Could not extract PDB URL from MVS data');
-      }
-      
-      // Fallback to direct PDB loading if specified in props
-      if (pdbUrl) {
-        await loadPDBData(pdbUrl);
-      }
-    } catch (error) {
-      console.error('Error loading MVS data:', error);
-      
-      // Try using pdbUrl as fallback if available
-      if (pdbUrl) {
-        await loadPDBData(pdbUrl);
+  // Forward error to parent if provided
+  useEffect(() => {
+    if (error) {
+      console.error('MolstarViewer: Error from context', error);
+      if (onError) {
+        onError(error);
       }
     }
-  };
+  }, [error, onError]);
   
   return (
     <div
       ref={containerRef}
+      data-testid="molstar-viewer"
+      className="molstar-viewer-container"
       style={{
         width,
         height,
-        position: 'relative'
+        position: 'relative',
+        overflow: 'hidden',
       }}
-    />
+    >
+      {loading && (
+        <div className="molstar-loading-indicator">
+          <span>Loading...</span>
+        </div>
+      )}
+    </div>
   );
 };
 
