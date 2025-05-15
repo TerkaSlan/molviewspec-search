@@ -1,5 +1,8 @@
 .App {
-  text-align: center;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .App-logo {
@@ -15,14 +18,195 @@
 
 .App-header {
   background-color: #282c34;
-  min-height: 15vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 1vmin);
-  color: white;
   padding: 20px;
+  color: white;
+}
+
+.App-header h1 {
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-group input {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  width: 100px;
+}
+
+.button-group {
+  display: flex;
+  gap: 5px;
+}
+
+.button-group button {
+  background-color: #4a5568;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.button-group button:hover {
+  background-color: #2d3748;
+}
+
+.button-group button.active {
+  background-color: #3182ce;
+}
+
+/* Search Panel Styles */
+.search-panel h2 {
+  margin-top: 0;
+  font-size: 1.3rem;
+  color: #2d3748;
+}
+
+.search-input-container {
+  margin-bottom: 15px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.pdb-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pdb-list li {
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pdb-list li:hover {
+  background-color: #e6f7ff;
+}
+
+.pdb-list li.selected {
+  background-color: #e6f7ff;
+  font-weight: bold;
+}
+
+.search-help {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: #718096;
+}
+
+.search-help h3 {
+  font-size: 1.1rem;
+  color: #2d3748;
+}
+
+/* Description Panel Styles */
+.description-panel h2 {
+  margin-top: 0;
+  font-size: 1.3rem;
+  color: #2d3748;
+}
+
+.loading, .error {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+}
+
+.loading {
+  background-color: #ebf8ff;
+  color: #3182ce;
+}
+
+.error {
+  background-color: #fff5f5;
+  color: #e53e3e;
+}
+
+.pdb-details {
+  margin-bottom: 20px;
+}
+
+.detail-section {
+  margin-bottom: 10px;
+}
+
+.detail-section h4 {
+  margin: 0;
+  color: #4a5568;
+  font-size: 1rem;
+}
+
+.detail-section p {
+  margin: 5px 0 0 0;
+}
+
+.external-links {
+  margin-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 15px;
+}
+
+.external-links h3 {
+  font-size: 1.1rem;
+  color: #2d3748;
+}
+
+.external-links ul {
+  padding-left: 20px;
+}
+
+.external-links li {
+  margin-bottom: 8px;
+}
+
+.external-links a {
+  color: #3182ce;
+  text-decoration: none;
+}
+
+.external-links a:hover {
+  text-decoration: underline;
+}
+
+.viewer-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.footer {
+  background-color: #f8f8f8;
+  padding: 10px 20px;
+  color: #4a5568;
+  font-size: 0.9rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Make sure the Molstar viewer fits properly */
+.viewer-container > div {
+  width: 100%;
+  height: 100%;
 }
 
 .App-link {
@@ -36,23 +220,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-h1 {
-  margin: 0 0 15px 0;
-}
-
-input {
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-main {
-  min-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  background-color: #f5f5f5;
 }

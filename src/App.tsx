@@ -1,11 +1,16 @@
-import MolstarViewer from "./components/MolstarViewer";
-import Search from "./components/Search";
-import Description from "./components/Description";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import './App.css';
+import MolstarViewer from './components/MolstarViewer';
+import { createBasicMVS, createExplainedMVS } from './components/MVSBuilder';
+import Search from './components/Search';
+import Description from './components/Description';
 
 function App() {
+  const [useMVS, setUseMVS] = useState<boolean>(true);
+  const [mvsMode, setMvsMode] = useState<'basic' | 'explained'>('basic');
+  const [pdbId, setPdbId] = useState<string>('1tqn');
   const [contentHeight, setContentHeight] = useState<string | number>('100vh');
-  
+
   useEffect(() => {
     // Set an explicit height to prevent layout shifts
     setContentHeight('calc(100vh - 10px)');
@@ -18,43 +23,127 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Create an MVS data object
+  const mvsData = useMVS ? (
+    mvsMode === 'basic' 
+      ? createBasicMVS(pdbId, {
+          title: `Structure ${pdbId}`,
+          description: "Standard representation with cartoon for protein and ball-and-stick for ligands"
+        })
+      : createExplainedMVS(pdbId, {
+          title: `Interactive ${pdbId}`,
+          description: "Multiple views of the structure with different representations"
+        })
+  ) : undefined;
+  
+  // For direct PDB loading
+  const pdbUrl = !useMVS ? `https://files.rcsb.org/download/${pdbId}.cif` : undefined;
+  
+  const handlePdbIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPdbId(e.target.value);
+  };
+
   return (
     <div className="App" style={{ 
       display: 'flex', 
+      flexDirection: 'column',
       width: '100%', 
-      height: contentHeight,
-      overflow: 'hidden'
+      height: '100vh'
     }}>
-      {/* Search on the left (20%) */}
-      <div style={{ 
-        width: '20%', 
-        height: '100%', 
-        borderRight: '1px solid #ddd',
-        overflow: 'auto'
-      }}>
-        <Search />
-      </div>
+      {/* Header with controls */}
+      <header className="App-header">
+        <h1>MolViewSpec Viewer</h1>
+        <div className="controls">
+          <div className="control-group">
+            <label>PDB ID:</label>
+            <input
+              type="text"
+              value={pdbId}
+              onChange={handlePdbIdChange}
+              placeholder="Enter PDB ID"
+            />
+          </div>
+          
+          <div className="control-group">
+            <label>Mode:</label>
+            <div className="button-group">
+              <button 
+                onClick={() => setUseMVS(true)}
+                className={useMVS ? 'active' : ''}
+              >
+                MolViewSpec
+              </button>
+              <button 
+                onClick={() => setUseMVS(false)}
+                className={!useMVS ? 'active' : ''}
+              >
+                Direct PDB
+              </button>
+            </div>
+          </div>
+          
+          {useMVS && (
+            <div className="control-group">
+              <label>MVS Type:</label>
+              <div className="button-group">
+                <button 
+                  onClick={() => setMvsMode('basic')}
+                  className={mvsMode === 'basic' ? 'active' : ''}
+                >
+                  Basic
+                </button>
+                <button 
+                  onClick={() => setMvsMode('explained')}
+                  className={mvsMode === 'explained' ? 'active' : ''}
+                >
+                  Multi-View
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </header>
       
-      {/* MolstarViewer in the middle (60%) */}
+      {/* Main content with 3-panel layout */}
       <div style={{ 
-        flex: 1, 
-        height: '100%',
-        position: 'relative',
+        display: 'flex', 
+        flex: 1,
+        width: '100%', 
         overflow: 'hidden'
       }}>
-        <MolstarViewer 
-          pdbUrl="https://files.rcsb.org/download/4HHB.pdb"
-        />
-      </div>
-      
-      {/* Description on the right (20%) */}
-      <div style={{ 
-        width: '20%', 
-        height: '100%', 
-        borderLeft: '1px solid #ddd',
-        overflow: 'auto'
-      }}>
-        <Description />
+        {/* Search on the left (20%) */}
+        <div style={{ 
+          width: '20%', 
+          borderRight: '1px solid #ddd',
+          overflow: 'auto',
+          padding: '10px'
+        }}>
+          <Search pdbId={pdbId} onPdbIdChange={handlePdbIdChange} />
+        </div>
+        
+        {/* MolstarViewer in the middle (60%) */}
+        <div style={{ 
+          width: '60%', 
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <MolstarViewer 
+            mvsData={mvsData}
+            pdbUrl={pdbUrl}
+            width="100%"
+            height="100%"
+          />
+        </div>
+        
+        {/* Description on the right (20%) */}
+        <div style={{ 
+          width: '20%', 
+          borderLeft: '1px solid #ddd',
+          overflow: 'auto',
+          padding: '10px'
+        }}>
+          <Description pdbId={pdbId} />
+        </div>
       </div>
     </div>
   );
