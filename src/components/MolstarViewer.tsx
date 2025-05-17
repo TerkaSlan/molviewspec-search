@@ -113,15 +113,22 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
         .component({ selector: 'ligand' })
         .representation({ type: 'ball_and_stick' });
       
-      // Create metadata for the MVS snapshot
-      const snapshot = builder.getState();
-      snapshot.metadata = {
-        title: `${pdbId.toUpperCase()} Structure Visualization`,
-        description: `### PDB Structure ${pdbId.toUpperCase()}
+      // Use the builder to create a snapshot with metadata directly
+      const mvsDescription = `### PDB Structure ${pdbId.toUpperCase()}
 - Cartoon representation of protein
-- Ball and stick representation of ligands`,
-        timestamp: new Date().toISOString(),
-      };
+- Ball and stick representation of ligands`;
+      
+      const snapshot = builder.getSnapshot({
+        title: `${pdbId.toUpperCase()} Structure Visualization`,
+        description: mvsDescription,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Set the MVS description in the model so DescriptionPanel can access it
+      model.state.mvsDescription.next(mvsDescription);
+      
+      // Store the full snapshot in the model for download functionality
+      model.state.currentMVS.next(snapshot);
       
       // Load the MVS with metadata
       await loadMVS(plugin, snapshot, { replaceExisting: true });
@@ -130,7 +137,7 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
     } finally {
       setLoading(false);
     }
-  }, [viewer, handleError]);
+  }, [viewer, handleError, model]);
 
   // Subscribe to model search result changes to load structures
   useEffect(() => {

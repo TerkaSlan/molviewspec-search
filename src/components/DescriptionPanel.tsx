@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useModel, useBehavior } from '../model';
 
@@ -7,8 +7,37 @@ const DescriptionPanel: React.FC = () => {
   const searchResult = useBehavior(model.state.currentResult);
   const isLoading = useBehavior(model.state.isLoading);
   const error = useBehavior(model.state.error);
+  const mvsDescription = useBehavior(model.state.mvsDescription);
+  const currentMVS = useBehavior(model.state.currentMVS);
   
-  const { title, description } = searchResult?.structureInfo || {};
+  const { title } = searchResult?.structureInfo || {};
+
+  // Function to download the MVS as MVSJ file
+  const handleDownloadMVS = useCallback(() => {
+    if (!currentMVS || !searchResult) return;
+    
+    try {
+      // Get the MVSJ string representation
+      const mvsj = window.molstar.PluginExtensions.mvs.MVSData.toMVSJ(currentMVS);
+      
+      // Create a blob and download link
+      const blob = new Blob([mvsj], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link element
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${searchResult.id || 'structure'}.mvsj`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Failed to download MVS:', err);
+    }
+  }, [currentMVS, searchResult]);
 
   return (
     <div className="description-panel">
@@ -31,12 +60,26 @@ const DescriptionPanel: React.FC = () => {
             </div>
           )}
           
-          {description && (
+          {mvsDescription && (
             <div className="description-item description-markdown">
-              <span className="description-label">Description:</span>
+              <span className="description-label">MVS Description:</span>
               <div className="description-value">
-                <ReactMarkdown>{description}</ReactMarkdown>
+                <ReactMarkdown>{mvsDescription}</ReactMarkdown>
               </div>
+            </div>
+          )}
+          
+          {currentMVS && (
+            <div className="description-item">
+              <button 
+                className="download-button"
+                onClick={handleDownloadMVS}
+              >
+                Download MVSJ File
+              </button>
+              <p className="download-hint">
+                Download the MolViewSpec JSON for use in other Mol* applications
+              </p>
             </div>
           )}
         </div>

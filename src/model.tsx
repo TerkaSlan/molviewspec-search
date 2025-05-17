@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 export interface StructureInfo {
   title?: string;
   description?: string;
+  mvsDescription?: string;  // Added to store the MVS-generated description
 }
 
 // Structure search result interface
@@ -39,7 +40,13 @@ export class MolViewSpecModel {
     isLoading: new BehaviorSubject<boolean>(false),
     
     // Error state
-    error: new BehaviorSubject<string | null>(null)
+    error: new BehaviorSubject<string | null>(null),
+    
+    // MVS Description from the viewer
+    mvsDescription: new BehaviorSubject<string | null>(null),
+    
+    // Current MVS snapshot for download
+    currentMVS: new BehaviorSubject<any>(null)
   };
 
   // Subscriptions cleanup

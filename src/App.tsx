@@ -9,9 +9,9 @@ const App: React.FC = () => {
     <ModelProvider>
       <div className="app-container">
         <header className="app-header">
-          <h1 className="app-title">Mol* MolViewSpec Demo</h1>
+          <h1 className="app-title">Mol* MolViewSpec Search Demo</h1>
           <p className="app-subtitle">
-            A demonstration of loading and building MolViewSpec views in Mol* viewer
+            Search, create and visualize molecular structures through programmatic MolViewSpec generation
           </p>
         </header>
         
@@ -38,14 +38,18 @@ const App: React.FC = () => {
           <h2 className="footer-title">About this demo</h2>
           <div className="footer-content">
             <p>
-              This demo shows two key functionalities:
+              This demo showcases the programmatic creation of MolViewSpec (MVS) for molecular visualization:
             </p>
             <ol className="footer-list">
-              <li>Loading a pre-defined MVS file (1cbs.mvsj) from a URL</li>
+              <li>Enter a PDB ID in the search box</li>
+              <li>The app programmatically constructs an MVS with appropriate representations</li>
+              <li>The MVS builder creates a snapshot with integrated metadata and descriptions</li>
+              <li>The complete MVS is passed to Mol* viewer for interactive visualization</li>
+              <li>The MVS-generated description is displayed in the structure info panel</li>
+              <li>Download the MVSJ file for use in other Mol* applications</li>
             </ol>
             <p>
-              Enter a PDB ID in the search panel to view and explore structures.
-              Check the console to see the MVS data that was loaded or built.
+              This demonstrates how MVS can be dynamically generated and used as a complete visualization specification.
             </p>
           </div>
         </div>

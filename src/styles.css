@@ -290,4 +290,33 @@ button:disabled {
   text-align: center;
   color: #666;
   font-style: italic;
+}
+
+/* Add styles for the download button */
+.download-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 12px;
+  transition: background-color 0.2s;
+}
+
+.download-button:hover {
+  background-color: #2980b9;
+}
+
+.download-button:active {
+  background-color: #1f6aa7;
+}
+
+.download-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+  font-style: italic;
 } 
