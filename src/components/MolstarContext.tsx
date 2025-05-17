@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
 import pluginManager, { MolstarPluginOptions } from './MolstarPluginManager';
+import { MVSData, MVSData_States } from 'molstar/lib/extensions/mvs/mvs-data';
 
 /**
  * The shape of the Molstar context
@@ -148,5 +149,46 @@ export const useMolstar = () => {
   
   return context;
 };
+
+/**
+ * Create a basic MVS data structure using the MVS builder
+ */
+export function createExampleMVS(pdbId: string): MVSData_States {
+  // Create an MVS builder
+  const builder = MVSData.createBuilder();
+  
+  // Build the MVS tree
+  const structure = builder
+    .download({ url: `https://files.rcsb.org/download/${pdbId}.cif` })
+    .parse({ format: 'mmcif' })
+    .modelStructure({ model_index: 0 });
+  
+  structure
+    .component({ selector: 'polymer' })
+    .representation({ type: 'cartoon' });
+  
+  structure
+    .component({ selector: 'ligand' })
+    .representation({ type: 'ball_and_stick' });
+  
+  // Create a snapshot with the current state
+  const snapshot = builder.getSnapshot({
+    title: `Structure ${pdbId}`,
+    description: `Visualization of ${pdbId}`,
+    linger_duration_ms: 0 // Stay on this snapshot
+  });
+
+  // Return properly formatted MVSData_States object
+  return {
+    kind: 'multiple',
+    snapshots: [snapshot],
+    metadata: {
+      title: `Structure ${pdbId}`,
+      description: `Visualization of ${pdbId}`,
+      version: '1.0',
+      timestamp: new Date().toISOString()
+    }
+  };
+}
 
 export default MolstarContext; 

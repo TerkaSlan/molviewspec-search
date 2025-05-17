@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MolstarViewerProps } from './types';
 import { useMolstar } from './MolstarContext';
 import 'molstar/lib/mol-plugin-ui/skin/light.scss';
@@ -19,71 +19,69 @@ const MolstarViewer: React.FC<MolstarViewerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { loading, error, loadPdbStructure, loadMvsData, isInitialized, initializePlugin } = useMolstar();
+  const [initComplete, setInitComplete] = useState(false);
   
-  // Initialize plugin when the component mounts
+  // Handle initialization and data loading
   useEffect(() => {
-    console.log('MolstarViewer: Initialize plugin effect', { pdbUrl, mvsData });
+    console.log('MolstarViewer: Effect triggered', { pdbUrl, mvsData });
     if (!containerRef.current) return;
     
-    // This div will host the Molstar plugin
-    const pluginContainer = containerRef.current;
     let mounted = true;
-
-    // Initialize the plugin with the container element
-    initializePlugin(pluginContainer)
-      .then(() => {
-        if (mounted) {
-          console.log('MolstarViewer: Plugin initialized successfully');
-        }
-      })
-      .catch(err => {
-        if (mounted) {
-          console.error('Failed to initialize Molstar plugin:', err);
-          if (onError) onError(err instanceof Error ? err : new Error('Failed to initialize plugin'));
-        }
-      });
+    const pluginContainer = containerRef.current;
     
-    // Cleanup when component unmounts - just mark as unmounted, don't try to dispose
-    return () => {
-      console.log('MolstarViewer: Cleaning up component');
-      mounted = false;
-    };
-  }, [initializePlugin, onError, pdbUrl, mvsData]);
-  
-  // Load data when props change
-  useEffect(() => {
-    console.log('MolstarViewer: Load data effect', { pdbUrl, mvsData, isInitialized: isInitialized() });
-    if (!isInitialized()) {
-      console.log('MolstarViewer: Plugin not initialized yet, skipping data load');
-      return;
-    }
-    
-    const loadData = async () => {
-      console.log('MolstarViewer: Loading data', { pdbUrl, mvsData });
+    const initAndLoadData = async () => {
       try {
+        // Step 1: Initialize plugin if needed
+        if (!isInitialized()) {
+          console.log('MolstarViewer: Initializing plugin');
+          await initializePlugin(pluginContainer);
+          if (!mounted) return;
+          console.log('MolstarViewer: Plugin initialized successfully');
+          setInitComplete(true);
+        }
+        
+        // Step 2: Load data
         if (mvsData) {
           console.log('MolstarViewer: Loading MVS data');
           await loadMvsData(mvsData);
+          if (!mounted) return;
           console.log('MolstarViewer: MVS data loaded successfully');
           if (onStructureLoaded) onStructureLoaded();
         } else if (pdbUrl) {
           console.log('MolstarViewer: Loading PDB structure from URL', pdbUrl);
           await loadPdbStructure(pdbUrl);
+          if (!mounted) return;
           console.log('MolstarViewer: PDB structure loaded successfully');
           if (onStructureLoaded) onStructureLoaded();
         } else {
           console.log('MolstarViewer: No data to load');
         }
       } catch (err) {
-        console.error('MolstarViewer: Error loading data', err);
+        if (!mounted) return;
+        console.error('MolstarViewer: Error during initialization or data loading', err);
         if (onError) {
-          onError(err instanceof Error ? err : new Error('Failed to load data'));
+          onError(err instanceof Error ? err : new Error('Failed to initialize or load data'));
         }
       }
     };
     
-    loadData();
-  }, [pdbUrl, mvsData, loadPdbStructure, loadMvsData, isInitialized, onStructureLoaded, onError]);
+    initAndLoadData();
+    
+    // Cleanup when component unmounts
+    return () => {
+      console.log('MolstarViewer: Cleaning up component');
+      mounted = false;
+    };
+  }, [
+    pdbUrl, 
+    mvsData, 
+    initializePlugin, 
+    isInitialized, 
+    loadPdbStructure, 
+    loadMvsData, 
+    onStructureLoaded, 
+    onError
+  ]);
   
   // Forward error to parent if provided
   useEffect(() => {

@@ -46,6 +46,20 @@
   width: 100px;
 }
 
+.control-group button {
+  background-color: #4a5568;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.control-group button:hover {
+  background-color: #2d3748;
+}
+
 .button-group {
   display: flex;
   gap: 5px;

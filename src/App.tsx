@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import MolstarViewer from './components/MolstarViewer';
-import { createBasicMVS, createExplainedMVS } from './components/MVSBuilder';
 import Search from './components/Search';
 import Description from './components/Description';
 import { MolstarProvider } from './components/MolstarContext';
+import { createExampleMVS } from './components/MolstarContext';
+import { MVSData_States } from 'molstar/lib/extensions/mvs/mvs-data';
 
 function App() {
-  const [useMVS, setUseMVS] = useState<boolean>(true);
-  const [mvsMode, setMvsMode] = useState<'basic' | 'explained'>('basic');
+  const [viewerMode, setViewerMode] = useState<'direct' | 'mvs'>('mvs');
   const [pdbId, setPdbId] = useState<string>('1tqn');
   const [contentHeight, setContentHeight] = useState<string | number>('100vh');
 
   useEffect(() => {
-    // use contentHeight
     // Set an explicit height to prevent layout shifts
     setContentHeight('calc(100vh - 10px)');
     
@@ -25,24 +24,16 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, [contentHeight]);
 
-  // Create an MVS data object
-  const mvsData = useMVS ? (
-    mvsMode === 'basic' 
-      ? createBasicMVS(pdbId, {
-          title: `Structure ${pdbId}`,
-          description: "Standard representation with cartoon for protein and ball-and-stick for ligands"
-        })
-      : createExplainedMVS(pdbId, {
-          title: `Interactive ${pdbId}`,
-          description: "Multiple views of the structure with different representations"
-        })
-  ) : undefined;
-  
-  // For direct PDB loading
-  const pdbUrl = !useMVS ? `https://files.rcsb.org/download/${pdbId}.cif` : undefined;
+  // Create URL or MVS data based on viewer mode
+  const pdbUrl = `https://files.rcsb.org/download/${pdbId}.cif`;
+  const mvsData = viewerMode === 'mvs' ? createExampleMVS(pdbId) : undefined;
   
   const handlePdbIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPdbId(e.target.value);
+  };
+
+  const toggleViewerMode = () => {
+    setViewerMode(prevMode => prevMode === 'direct' ? 'mvs' : 'direct');
   };
 
   return (
@@ -66,44 +57,18 @@ function App() {
                 placeholder="Enter PDB ID"
               />
             </div>
-            
             <div className="control-group">
-              <label>Mode:</label>
-              <div className="button-group">
-                <button 
-                  onClick={() => setUseMVS(true)}
-                  className={useMVS ? 'active' : ''}
-                >
-                  MolViewSpec
-                </button>
-                <button 
-                  onClick={() => setUseMVS(false)}
-                  className={!useMVS ? 'active' : ''}
-                >
-                  Direct PDB
-                </button>
-              </div>
+              <label>Viewer Mode:</label>
+              <button 
+                onClick={toggleViewerMode}
+                style={{ 
+                  backgroundColor: viewerMode === 'mvs' ? '#3182ce' : undefined,
+                  fontWeight: viewerMode === 'mvs' ? 'bold' : undefined
+                }}
+              >
+                {viewerMode === 'direct' ? 'Direct PDB' : 'MVS Mode'}
+              </button>
             </div>
-            
-            {useMVS && (
-              <div className="control-group">
-                <label>MVS Type:</label>
-                <div className="button-group">
-                  <button 
-                    onClick={() => setMvsMode('basic')}
-                    className={mvsMode === 'basic' ? 'active' : ''}
-                  >
-                    Basic
-                  </button>
-                  <button 
-                    onClick={() => setMvsMode('explained')}
-                    className={mvsMode === 'explained' ? 'active' : ''}
-                  >
-                    Multi-View
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </header>
         
@@ -131,8 +96,8 @@ function App() {
             overflow: 'hidden'
           }}>
             <MolstarViewer 
+              pdbUrl={viewerMode === 'direct' ? pdbUrl : undefined}
               mvsData={mvsData}
-              pdbUrl={pdbUrl}
               width="100%"
               height="100%"
             />

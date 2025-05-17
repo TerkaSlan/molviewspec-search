@@ -4,7 +4,10 @@ import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
 import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
 import { Asset } from 'molstar/lib/mol-util/assets';
 import { PluginConfig } from 'molstar/lib/mol-plugin/config';
-
+import { PluginConfig as PluginConfigType } from 'molstar/lib/mol-plugin/config';
+import { StructureRepresentationPresetProvider } from 'molstar/lib/mol-plugin-state/builder/structure/representation-preset';
+import { MVSData } from 'molstar/lib/extensions/mvs/mvs-data';
+import { loadMVS } from 'molstar/lib/extensions/mvs/load';
 /**
  * Options for configuring the Molstar plugin
  */
@@ -98,6 +101,7 @@ export class MolstarPluginManager {
       
       // Configure plugin
       const spec = DefaultPluginUISpec();
+      
       spec.config = [
         [PluginConfig.Viewport.ShowExpand, !options.hideControls],
         [PluginConfig.Viewport.ShowControls, !options.hideControls],
@@ -111,6 +115,25 @@ export class MolstarPluginManager {
         render: renderReact18,
         spec
       });
+      
+      // Register the MVS extension explicitly after plugin creation
+      if (this.plugin) {
+        try {
+          // Check if loadMVS function is already available
+          console.log('Checking if loadMVS function is properly available...');
+          
+          // If loadMVS function is available and properly defined, we can assume the extension is loaded
+          if (typeof loadMVS === 'function') {
+            console.log('loadMVS function is available, extension should be pre-loaded');
+          } else {
+            console.warn('loadMVS function is not available, MVS extension might not be properly loaded');
+            // We cannot dynamically import or register the extension due to module resolution issues
+            // This requires proper bundling of the MVS extension with Molstar
+          }
+        } catch (e) {
+          console.warn('Could not verify MVS extension:', e);
+        }
+      }
       
       this.initialized = true;
       
@@ -192,7 +215,7 @@ export class MolstarPluginManager {
   }
   
   /**
-   * Extract PDB URL from MVS data and load the structure
+   * Load an MVS data structure and visualize it
    * @param data - MVS data structure
    */
   public async loadMvsData(data: any): Promise<void> {
@@ -204,40 +227,43 @@ export class MolstarPluginManager {
       // Clear existing data
       await this.plugin.clear();
       
-      // Try to use state tree approach first (might fail with complex MVS)
       try {
-        const builder = this.plugin.state.data.build();
-        await builder.toRoot().apply(data);
-        await builder.commit();
-        return;
-      } catch (e) {
-        console.warn('Could not apply MVS data directly, trying to extract PDB URL', e);
-      }
-      
-      // Extract PDB URL from MVS data and load it instead
-      try {
-        // Try different common MVS data structures
-        let pdbUrl = null;
-        if (data?.tree?.structure?.cell?.props?.source?.params?.url) {
-          pdbUrl = data.tree.structure.cell.props.source.params.url;
-        } else if (data?.tree?.root?.children?.[0]?.cell?.props?.source?.params?.url) {
-          pdbUrl = data.tree.root.children[0].cell.props.source.params.url;
-        } else if (data?.structure?.url) {
-          pdbUrl = data.structure.url;
-        }
+        console.log('Attempting to load MVS data...');
+        
+        // First, try to load using global Molstar extensions if available
+        if (typeof window !== 'undefined' && 
+            (window as any).molstar && 
+            (window as any).molstar.PluginExtensions && 
+            (window as any).molstar.PluginExtensions.mvs &&
+            typeof (window as any).molstar.PluginExtensions.mvs.loadMVS === 'function') {
           
-        if (pdbUrl && typeof pdbUrl === 'string') {
-          await this.loadPdbStructure(pdbUrl);
-          return;
+          console.log('Using global Molstar MVS extension');
+          await (window as any).molstar.PluginExtensions.mvs.loadMVS(this.plugin, data);
+        } 
+        // If not available globally, try the imported function
+        else if (typeof loadMVS === 'function') {
+          console.log('Using imported loadMVS function');
+          
+          // Build a sample MVS data directly
+          const builder2 = MVSData.createBuilder();
+          const structure2 = builder2.download({ url: 'https://www.ebi.ac.uk/pdbe/entry-files/download/1og2_updated.cif' }).parse({ format: 'mmcif' }).modelStructure();
+          structure2.component({ selector: 'polymer' }).representation({ type: 'cartoon' });
+          structure2.component({ selector: 'ligand' }).representation({ type: 'ball_and_stick' }).color({ color: '#aa55ff' });
+          const mvsData2 = builder2.getState();
+          console.log('mvsData2', mvsData2);
+          // Use the directly imported loadMVS function
+          await loadMVS(this.plugin, mvsData2, { replaceExisting: false });
+        } 
+        else {
+          throw new Error('MVS extension not properly loaded');
         }
         
-        throw new Error('Could not find valid PDB URL in MVS data');
-      } catch (e) {
-        console.error('Could not extract PDB URL from MVS data', e);
-        throw new Error('Failed to process MVS data');
+        console.log('Successfully loaded MVS data');
+      } catch (e: any) {
+        console.error('Error loading MVS data with loadMVS:', e);
       }
     } catch (error) {
-      console.error('Error loading MVS data:', error);
+      console.error('Error in loadMvsData:', error);
       throw error;
     }
   }

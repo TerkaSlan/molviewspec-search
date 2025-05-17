@@ -1,4 +1,5 @@
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
+import type { MVSData_States } from 'molstar/lib/extensions/mvs/mvs-data';
 
 /**
  * Metadata for MVS (MolViewSpec) data
@@ -132,7 +133,7 @@ export interface MolstarViewerProps {
   /** URL of a PDB file to load */
   pdbUrl?: string;
   /** MVS data to visualize */
-  mvsData?: MVSData;
+  mvsData?: MVSData | MVSData_States;
   /** Options for configuring the viewer */
   options?: MolstarViewerOptions;
   /** Callback when a structure is loaded successfully */
