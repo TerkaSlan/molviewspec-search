@@ -62,8 +62,6 @@ export class MolViewSpecModel {
   async searchStructure(query: string) {
     if (!query.trim()) return;
     
-    console.log(`Model: Searching for structure: ${query}`);
-    
     // Update search query
     this.state.searchQuery.next(query);
     
@@ -76,13 +74,11 @@ export class MolViewSpecModel {
       // For now, we'll simulate some data
       const result = await this.fetchStructureData(query);
       
-      console.log(`Model: Search completed, updating result for ${query}:`, result);
-      
       // Update the current result
       this.state.currentResult.next(result);
     } catch (error) {
-      console.error('Error searching structure:', error);
-      this.state.error.next(error instanceof Error ? error.message : 'Unknown error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      this.state.error.next(errorMessage);
     } finally {
       this.state.isLoading.next(false);
     }

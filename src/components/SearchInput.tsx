@@ -8,7 +8,6 @@ const SearchInput: React.FC = () => {
 
   const handleSearch = () => {
     if (query.trim()) {
-      console.log(`SearchInput: Initiating search for: ${query}`);
       model.searchStructure(query);
     }
   };

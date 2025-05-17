@@ -34,37 +34,60 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
 
   // Initialize the Mol* viewer
   useEffect(() => {
+    let mounted = true;
     if (!containerRef.current || !window.molstar) return;
 
-    // Initialize the viewer
     const initViewer = async () => {
-      const viewer = await window.molstar.Viewer.create(
-        containerRef.current,
-        { 
-          layoutIsExpanded: false, 
-          layoutShowControls: false,
-          layoutShowLeftPanel: false,
-          layoutShowRightPanel: false
+      try {
+        const newViewer = await window.molstar.Viewer.create(
+          containerRef.current,
+          { 
+            layoutIsExpanded: false, 
+            layoutShowControls: false,
+            layoutShowLeftPanel: false,
+            layoutShowRightPanel: false
+          }
+        );
+        
+        if (mounted) {
+          setViewer(newViewer);
         }
-      );
-      
-      setViewer(viewer);
+      } catch (err) {
+        if (mounted) {
+          setError(`Failed to initialize viewer: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
     };
 
     initViewer();
 
+    // Return cleanup function
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Cleanup viewer on unmount
+  useEffect(() => {
+    // This effect handles cleanup of the viewer
     return () => {
       if (viewer) {
         viewer.plugin.dispose();
       }
     };
-  }, []);
+  }, [viewer]);
+
+  // Helper function to handle errors
+  const handleError = useCallback((operation: string, err: unknown) => {
+    const errorMessage = `Failed to ${operation}: ${err instanceof Error ? err.message : String(err)}`;
+    setError(errorMessage);
+    model.state.error.next(errorMessage);
+  }, [model]);
 
   // Memoize the loadPdbById function so it has a stable identity for dependency arrays
   const loadPdbById = useCallback(async (pdbId: string) => {
     if (!viewer) return;
     
-    console.log(`MolstarViewer: loadPdbById called with ${pdbId}`);
     setLoading(true);
     setError(null);
     
@@ -100,31 +123,21 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
 - Ball and stick representation of ligands`,
         timestamp: new Date().toISOString(),
       };
-      console.log(snapshot);
+      
       // Load the MVS with metadata
       await loadMVS(plugin, snapshot, { replaceExisting: true });
-      
-      console.log(`Successfully loaded structure ${pdbId}`);
     } catch (err) {
-      console.error(`Error loading structure ${pdbId}:`, err);
-      setError(`Failed to load structure ${pdbId}: ${err instanceof Error ? err.message : String(err)}`);
-      
-      // Update model with error
-      model.state.error.next(`Failed to load structure ${pdbId}: ${err instanceof Error ? err.message : String(err)}`);
+      handleError(`load structure ${pdbId}`, err);
     } finally {
       setLoading(false);
     }
-  }, [viewer, model]);
+  }, [viewer, handleError]);
 
   // Subscribe to model search result changes to load structures
   useEffect(() => {
-    if (!viewer) return;
-
-    // If we have a search result, load the structure
-    if (searchResult && searchResult.id) {
-      console.log(`MolstarViewer: Loading structure ${searchResult.id} from model update`);
-      loadPdbById(searchResult.id);
-    }
+    if (!viewer || !searchResult?.id) return;
+    
+    loadPdbById(searchResult.id);
   }, [viewer, searchResult, loadPdbById]);
 
   // Build a custom MVS and load it
@@ -174,15 +187,12 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
       
       // Load the MVS with metadata
       await loadMVS(plugin, snapshot, { replaceExisting: true });
-      
-      console.log('Successfully built and loaded custom MVS for 1og2');
     } catch (err) {
-      console.error('Error building MVS:', err);
-      setError(`Failed to build MVS: ${err instanceof Error ? err.message : String(err)}`);
+      handleError('build custom MVS', err);
     } finally {
       setLoading(false);
     }
-  }, [viewer]);
+  }, [viewer, handleError]);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
