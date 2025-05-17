@@ -204,6 +204,76 @@ button:disabled {
   color: #24292e;
 }
 
+/* Markdown Styles */
+.description-markdown .description-value {
+  margin-top: 8px;
+}
+
+.description-markdown p {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.description-markdown h1, 
+.description-markdown h2, 
+.description-markdown h3,
+.description-markdown h4,
+.description-markdown h5,
+.description-markdown h6 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #24292e;
+}
+
+.description-markdown ul, 
+.description-markdown ol {
+  margin-left: 24px;
+  margin-bottom: 12px;
+}
+
+.description-markdown li {
+  margin-bottom: 4px;
+}
+
+.description-markdown a {
+  color: #4CAF50;
+  text-decoration: none;
+}
+
+.description-markdown a:hover {
+  text-decoration: underline;
+}
+
+.description-markdown code {
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.description-markdown pre {
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.description-markdown blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 16px;
+  margin-left: 0;
+  margin-bottom: 12px;
+  color: #666;
+}
+
+.description-markdown img {
+  max-width: 100%;
+  height: auto;
+  margin: 12px 0;
+  border-radius: 4px;
+}
+
 /* Error Display */
 .error-display {
   color: #F44336;

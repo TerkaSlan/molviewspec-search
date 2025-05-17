@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
+import { useModel, useBehavior } from '../model';
 
-interface SearchInputProps {
-  onSearch: (query: string) => void;
-}
-
-const SearchInput: React.FC<SearchInputProps> = ({ onSearch }) => {
+const SearchInput: React.FC = () => {
   const [query, setQuery] = useState<string>('');
+  const model = useModel();
+  const isLoading = useBehavior(model.state.isLoading);
 
   const handleSearch = () => {
     if (query.trim()) {
-      onSearch(query);
+      console.log(`SearchInput: Initiating search for: ${query}`);
+      model.searchStructure(query);
     }
   };
 
@@ -24,11 +24,16 @@ const SearchInput: React.FC<SearchInputProps> = ({ onSearch }) => {
           placeholder="Enter PDB ID (e.g., 1cbs, 1og2)..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSearch()}
+          disabled={isLoading}
         />
       </div>
-      <button className="search-button" onClick={handleSearch}>
-        Search
+      <button 
+        className="search-button" 
+        onClick={handleSearch} 
+        disabled={isLoading || !query.trim()}
+      >
+        {isLoading ? 'Searching...' : 'Search'}
       </button>
     </div>
   );
