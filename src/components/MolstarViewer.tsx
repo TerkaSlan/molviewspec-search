@@ -1,23 +1,48 @@
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { useModel, useBehavior } from '../model';
 
-// We'll use the global molstar object that's loaded from CDN
+/**
+ * Extends the Window interface to include the molstar global object
+ * @global
+ */
 declare global {
   interface Window {
+    /**
+     * The global molstar object loaded from CDN
+     */
     molstar: any;
   }
 }
 
+/**
+ * Props for the MolstarViewer component
+ * @interface MolstarViewerProps
+ * @property {string} [width] - Width of the viewer container (default: '800px')
+ * @property {string} [height] - Height of the viewer container (default: '600px')
+ */
 interface MolstarViewerProps {
   width?: string;
   height?: string;
 }
 
-// Define the ref type
+/**
+ * Interface for the MolstarViewer ref methods
+ * @interface MolstarViewerRef
+ * @property {(pdbId: string) => Promise<void>} loadPdbById - Method to load a PDB structure by ID
+ */
 export interface MolstarViewerRef {
   loadPdbById: (pdbId: string) => Promise<void>;
 }
 
+/**
+ * MolstarViewer component for molecular structure visualization
+ * Handles initialization of Mol* viewer and programmatic MVS generation
+ * 
+ * @component
+ * @param {MolstarViewerProps} props - Component props
+ * @param {React.Ref<MolstarViewerRef>} ref - Forwarded ref for parent component access
+ * @returns {JSX.Element} The MolstarViewer component
+ */
 const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
   width = '800px',
   height = '600px',
@@ -31,11 +56,16 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
   // Use the model's current search result
   const searchResult = useBehavior(model.state.currentResult);
 
-  // Initialize the Mol* viewer
+  /**
+   * Initialize the Mol* viewer when the component mounts
+   */
   useEffect(() => {
     let mounted = true;
     if (!containerRef.current || !window.molstar) return;
 
+    /**
+     * Initialize the Mol* viewer instance
+     */
     const initViewer = async () => {
       try {
         const newViewer = await window.molstar.Viewer.create(
@@ -66,9 +96,10 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
     };
   }, []);
 
-  // Cleanup viewer on unmount
+  /**
+   * Clean up the viewer when component unmounts
+   */
   useEffect(() => {
-    // This effect handles cleanup of the viewer
     return () => {
       if (viewer) {
         viewer.plugin.dispose();
@@ -76,14 +107,22 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
     };
   }, [viewer]);
 
-  // Helper function to handle errors
+  /**
+   * Helper function to handle and format errors
+   * @param {string} operation - The operation that failed
+   * @param {unknown} err - The error that occurred
+   */
   const handleError = useCallback((operation: string, err: unknown) => {
     const errorMessage = `Failed to ${operation}: ${err instanceof Error ? err.message : String(err)}`;
     setError(errorMessage);
     model.state.error.next(errorMessage);
   }, [model]);
 
-  // Memoize the loadPdbById function so it has a stable identity for dependency arrays
+  /**
+   * Load a PDB structure by ID and visualize it using MVS
+   * @param {string} pdbId - The PDB ID to load
+   * @returns {Promise<void>}
+   */
   const loadPdbById = useCallback(async (pdbId: string) => {
     if (!viewer) return;
     
@@ -139,14 +178,18 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
     }
   }, [viewer, handleError, model]);
 
-  // Subscribe to model search result changes to load structures
+  /**
+   * Load structure when search result changes
+   */
   useEffect(() => {
     if (!viewer || !searchResult?.id) return;
     
     loadPdbById(searchResult.id);
   }, [viewer, searchResult, loadPdbById]);
 
-  // Expose methods to parent component
+  /**
+   * Expose methods to parent component through ref
+   */
   useImperativeHandle(ref, () => ({
     loadPdbById
   }), [loadPdbById]);

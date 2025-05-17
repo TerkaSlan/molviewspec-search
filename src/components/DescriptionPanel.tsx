@@ -2,6 +2,13 @@ import React, { useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useModel, useBehavior } from '../model';
 
+/**
+ * DescriptionPanel component for displaying structure metadata and descriptions
+ * Shows structure title, MVS-generated descriptions, and provides download functionality
+ * 
+ * @component
+ * @returns {JSX.Element} The DescriptionPanel component
+ */
 const DescriptionPanel: React.FC = () => {
   const model = useModel();
   const searchResult = useBehavior(model.state.currentResult);
@@ -12,7 +19,10 @@ const DescriptionPanel: React.FC = () => {
   
   const { title } = searchResult?.structureInfo || {};
 
-  // Function to download the MVS as MVSJ file
+  /**
+   * Download the current MVS data as an MVSJ file
+   * Creates a temporary link and triggers a file download in the browser
+   */
   const handleDownloadMVS = useCallback(() => {
     if (!currentMVS || !searchResult) return;
     

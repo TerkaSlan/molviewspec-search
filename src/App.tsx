@@ -4,6 +4,13 @@ import SearchInput from './components/SearchInput';
 import DescriptionPanel from './components/DescriptionPanel';
 import { ModelProvider } from './model';
 
+/**
+ * Main application component
+ * Organizes the UI layout and wraps components with the ModelProvider
+ * 
+ * @component
+ * @returns {JSX.Element} The main application component
+ */
 const App: React.FC = () => {
   return (
     <ModelProvider>

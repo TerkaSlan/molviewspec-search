@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { useModel, useBehavior } from '../model';
 
+/**
+ * SearchInput component for molecular structure search
+ * Provides a search interface that triggers structure loading based on PDB ID
+ * 
+ * @component
+ * @returns {JSX.Element} The SearchInput component
+ */
 const SearchInput: React.FC = () => {
   const [query, setQuery] = useState<string>('');
   const model = useModel();
   const isLoading = useBehavior(model.state.isLoading);
 
+  /**
+   * Handle search submission
+   * Triggers the model to search and load the structure with the provided ID
+   */
   const handleSearch = () => {
     if (query.trim()) {
       model.searchStructure(query);
