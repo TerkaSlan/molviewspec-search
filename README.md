@@ -38,7 +38,6 @@ The application will open in your browser at `http://localhost:3000`.
 The demo includes two main functions:
 
 1. **Load Pre-defined MVS**: Loads a pre-defined MVS file (1cbs.mvsj) from GitHub and displays it
-2. **Build Custom MVS**: Builds a custom MVS programmatically for structure 1og2 with different representations for polymer and ligand components
 
 Click the buttons to switch between these two views. Check the browser console to see the MVS data.
 

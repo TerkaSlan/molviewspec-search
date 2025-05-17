@@ -42,7 +42,6 @@ const App: React.FC = () => {
             </p>
             <ol className="footer-list">
               <li>Loading a pre-defined MVS file (1cbs.mvsj) from a URL</li>
-              <li>Building a custom MVS programmatically for a structure (1og2)</li>
             </ol>
             <p>
               Enter a PDB ID in the search panel to view and explore structures.

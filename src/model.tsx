@@ -103,19 +103,6 @@ This structure represents the **Cellular Retinoic Acid-Binding Protein Type 2** 
 - Released: 1994
 
 The protein shows a β-barrel structure with retinoic acid bound inside.`
-      },
-      '1og2': {
-        title: 'Estrogen Receptor Ligand Binding Domain',
-        description: `### Estrogen Receptor Ligand Binding Domain
-        
-This structure represents the **Estrogen Receptor Ligand Binding Domain** complexed with an agonist.
-
-- Resolution: 2.05Å
-- Method: X-ray diffraction
-- Authors: Warnmark, A., Treuter, E., Gustafsson, J.A., Hubbard, R.E., Brzozowski, A.M.
-- Released: 2003
-
-The structure reveals key interactions involved in estrogen receptor activation.`
       }
     };
     
