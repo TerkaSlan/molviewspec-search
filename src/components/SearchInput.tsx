@@ -9,19 +9,20 @@ import { useModel, useBehavior } from '../model';
  * @returns {JSX.Element} The SearchInput component
  */
 const SearchInput: React.FC = () => {
-  const [query, setQuery] = useState<string>('');
+  // const [query, setQuery] = useState<string>('');
   const model = useModel();
-  const isLoading = useBehavior(model.state.isLoading);
+  const query = useBehavior(model.state.searchQuery);
+  const isLoading = useBehavior(model.state.result).type === 'loading';
 
   /**
    * Handle search submission
    * Triggers the model to search and load the structure with the provided ID
    */
-  const handleSearch = () => {
+  /* const handleSearch = () => {
     if (query.trim()) {
       model.searchStructure(query);
     }
-  };
+  }; */
 
   return (
     <div className="search-container">
@@ -33,14 +34,14 @@ const SearchInput: React.FC = () => {
           type="text"
           placeholder="Enter PDB ID (e.g., 1cbs, 1og2)..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSearch()}
+          onChange={(e) => model.state.searchQuery.next(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && !isLoading && model.searchStructure()}
           disabled={isLoading}
         />
       </div>
       <button 
         className="search-button" 
-        onClick={handleSearch} 
+        onClick={model.searchStructure} 
         disabled={isLoading || !query.trim()}
       >
         {isLoading ? 'Searching...' : 'Search'}

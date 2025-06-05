@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import MolstarViewer from './components/MolstarViewer';
 import SearchInput from './components/SearchInput';
 import DescriptionPanel from './components/DescriptionPanel';
-import { ModelProvider } from './model';
+import { ModelProvider, useBehavior, useSearchModel } from './model';
 
 /**
  * Main application component
@@ -12,7 +12,15 @@ import { ModelProvider } from './model';
  * @returns {JSX.Element} The main application component
  */
 const App: React.FC = () => {
+  const model = useSearchModel();
+
+  useEffect(() => {
+    model.state.searchQuery.next('1cbs');
+    model.searchStructure()
+  }, [model]);
+
   return (
+    // <MolViewSpecContext.Provider value={model}> 
     <ModelProvider>
       <div className="app-container">
         <header className="app-header">

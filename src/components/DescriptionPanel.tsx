@@ -11,9 +11,9 @@ import { useModel, useBehavior } from '../model';
  */
 const DescriptionPanel: React.FC = () => {
   const model = useModel();
-  const searchResult = useBehavior(model.state.currentResult);
-  const isLoading = useBehavior(model.state.isLoading);
-  const error = useBehavior(model.state.error);
+  const searchResult = useBehavior(model.state.result);
+  // const isLoading = useBehavior(model.state.isLoading);
+  // const error = useBehavior(model.state.error);
   const mvsDescription = useBehavior(model.state.mvsDescription);
   const currentMVS = useBehavior(model.state.currentMVS);
   
@@ -51,7 +51,7 @@ const DescriptionPanel: React.FC = () => {
 
   return (
     <div className="description-panel">
-      {isLoading && (
+      {searchResult.type === 'loading' && (
         <div className="loading">Loading structure information...</div>
       )}
       
@@ -83,7 +83,7 @@ const DescriptionPanel: React.FC = () => {
             <div className="description-item">
               <button 
                 className="download-button"
-                onClick={handleDownloadMVS}
+                onClick={model.downloadMVS}
               >
                 Download MVSJ File
               </button>

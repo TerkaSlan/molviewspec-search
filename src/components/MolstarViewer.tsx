@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { useModel, useBehavior } from '../model';
+import { useModel, useBehavior, MolViewSpecModel } from '../model';
 
 /**
  * Extends the Window interface to include the molstar global object
@@ -34,6 +34,11 @@ export interface MolstarViewerRef {
   loadPdbById: (pdbId: string) => Promise<void>;
 }
 
+export function MolstarUI({ model }: { model: MolViewSpecModel }) {
+  return <div style={{ position: 'relative', width: '100%', height: '100%' }}> 
+  <Plugin plugin={model.molstar.plugin} /> // import from molstar/lib/mol-plugin-ui/plugin
+  </div>
+}
 /**
  * MolstarViewer component for molecular structure visualization
  * Handles initialization of Mol* viewer and programmatic MVS generation
@@ -55,6 +60,14 @@ const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
   
   // Use the model's current search result
   const searchResult = useBehavior(model.state.currentResult);
+
+  useEffect(() => {
+      const sub = model.state.result.subscribe((result) => {
+        // ...
+      });
+      return () => sub.unsubscribe();
+      
+  }, [model]);
 
   /**
    * Initialize the Mol* viewer when the component mounts

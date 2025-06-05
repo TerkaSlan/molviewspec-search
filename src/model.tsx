@@ -1,5 +1,6 @@
-import { BehaviorSubject } from 'rxjs';
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { BehaviorSubject, Observable, throttleTime } from 'rxjs';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
 
 /**
  * Interface representing structure information and metadata
@@ -40,12 +41,46 @@ export function useBehavior<T>(subject: BehaviorSubject<T>): T {
   return value;
 }
 
+export type AsyncResult<T> =
+  | { type: 'loading' }
+  | { type: 'error', error: string }
+  | { type: 'result', value: T };
+
+
+class MolStarWrapper {
+  private pluginInitialized: (() => void) | null = null;
+  readonly initialized = new Promise<void>(res => {
+    this.pluginInitialized = res;
+  })
+
+  plugin: PluginUIContext = undefined as any;
+
+  private async init() {
+    // create plugin spec, await plugin.init(), ...
+    this.plugin = new PluginUIContext(spec); // include MVS behavior
+    await this.plugin.init();
+
+    this.pluginInitialized?.();
+  }
+  
+  async loadMVS() {
+    await this.initialized;
+  }
+
+  constructor() {
+    this.init();
+  }
+}
+
 /**
  * Main model class for the MolViewSpec application
  * Manages application state and provides data operations
  * @class MolViewSpecModel
  */
 export class MolViewSpecModel {
+
+  readonly molstar = new MolStarWrapper();
+
   /**
    * Observable state properties for the application
    * @public
@@ -55,13 +90,16 @@ export class MolViewSpecModel {
     searchQuery: new BehaviorSubject<string>(''),
     
     /** Current search result */
-    currentResult: new BehaviorSubject<SearchResult | null>(null),
+    result: new BehaviorSubject<AsyncResult<SearchResult | null>>({ 
+      type: 'result',
+      value: null
+    }),
     
     /** Loading state */
-    isLoading: new BehaviorSubject<boolean>(false),
+    // isLoading: new BehaviorSubject<boolean>(false),
     
     /** Error state */
-    error: new BehaviorSubject<string | null>(null),
+    // error: new BehaviorSubject<string | null>(null),
     
     /** MVS Description from the viewer */
     mvsDescription: new BehaviorSubject<string | null>(null),
@@ -80,7 +118,7 @@ export class MolViewSpecModel {
    * @param {(v: T) => void} action - The callback function to execute on value changes
    * @returns {() => void} A function to unsubscribe from the observable
    */
-  subscribe<T>(obs: BehaviorSubject<T>, action: (v: T) => void) {
+  subscribe<T>(obs: Observable<T>, action: (v: T) => void) {
     const subscription = obs.subscribe(action);
     this.unsubs.push(() => subscription.unsubscribe());
     return () => subscription.unsubscribe();
@@ -94,16 +132,43 @@ export class MolViewSpecModel {
     this.unsubs = [];
   }
 
+  mount() {
+    // this.subscribe(this.state.searchQuery
+    //  .pipe(throttleTime(33, undefined, { leading: false, trailing: true })),
+//
+  //    (query) => {
+    //  this.searchStructure(query);
+    //});
+
+    this.subscribe(this.state.result, (res) => {
+      if (res.type !== 'result' || !res.value) return;
+
+      const mvs = buildMVSState(res.value);
+
+      this.state.stateDescription.next(mvs.description);
+      this.currentMVS = mvs.data;
+      this.molstar.loadMVS(mvs.data);
+      // loadMVS(this.plugin, mvs)
+    });
+  }
+
+  private currentMVS: any = undefined;
+
+  downloadMVS = () => {
+    // download(new Blob([this.currentMVS]), 'mvs.mvsj'); // import from molstar/lib/mol-util/download
+  };
+
   /**
    * Search for a structure by ID
    * @param {string} query - The PDB ID to search for
    * @returns {Promise<void>}
    */
-  async searchStructure(query: string) {
+  searchStructure = async () => {
+    const query = this.state.searchQuery.value;
     if (!query.trim()) return;
     
     // Update search query
-    this.state.searchQuery.next(query);
+    // this.state.searchQuery.next(query);
     
     // Set loading state
     this.state.isLoading.next(true);
@@ -193,11 +258,19 @@ interface ModelProviderProps {
  * @returns {JSX.Element} Provider component
  */
 export const ModelProvider: React.FC<ModelProviderProps> = ({ children }) => {
-  const [model] = useState(() => new MolViewSpecModel());
-  
+  // const [model] = useState(() => new MolViewSpecModel());
+
+  const modelRef = useRef<MolViewSpecModel | null>(null);
+  if (!modelRef.current) {
+    modelRef.current = new MolViewSpecModel();
+  }
+  const model = modelRef.current;
+
   useEffect(() => {
+    // model.mount(); // init subscriptions
+
     // Load default structure on startup
-    model.searchStructure('1cbs');
+    // model.searchStructure('1cbs');
     
     return () => {
       model.dispose();
@@ -223,3 +296,20 @@ export function useModel() {
   }
   return context;
 } 
+
+// creates a singleton model instance
+export function useSearchModel() {
+  const modelRef = useRef<MolViewSpecModel | null>(null);
+  if (!modelRef.current) {
+    modelRef.current = new MolViewSpecModel();
+  }
+
+  useEffect(() => {
+    modelRef.current!.mount();
+    return () => {
+      modelRef.current!.dispose();
+    };
+  }, []);
+
+  return modelRef.current;
+}
