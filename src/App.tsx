@@ -1,9 +1,7 @@
-import React, { useEffect } from 'react';
-import MolstarViewer from './components/MolstarViewer';
+import React from 'react';
 import SearchInput from './components/SearchInput';
 import DescriptionPanel from './components/DescriptionPanel';
-import { ModelProvider, useModel } from './model';
-
+import { MVSExample } from './components/MVSExample';
 /**
  * Main application component
  * Organizes the UI layout and wraps components with the ModelProvider
@@ -12,24 +10,6 @@ import { ModelProvider, useModel } from './model';
  * @returns {JSX.Element} The main application component
  */
 const App: React.FC = () => {
-  return (
-    <ModelProvider>
-      <AppContent />
-    </ModelProvider>
-  );
-};
-
-const AppContent: React.FC = () => {
-  const model = useModel();
-
-  useEffect(() => {
-    model.state.search.next({
-      ...model.state.search.value,
-      query: '1cbs'
-    });
-    model.searchStructure();
-  }, [model]);
-
   return (
     <div className="app-container">
       <header className="app-header">
@@ -46,10 +26,7 @@ const AppContent: React.FC = () => {
         </div>
         
         <div className="center-panel">
-          <MolstarViewer 
-            width="100%" 
-            height="600px" 
-          />
+          <MVSExample />
         </div>
         
         <div className="right-panel panel">

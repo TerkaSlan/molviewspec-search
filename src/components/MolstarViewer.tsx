@@ -1,168 +1,176 @@
-import React, { useEffect, useRef, useState, forwardRef } from 'react';
-import { useModel, useBehavior, MolViewSpecModel } from '../model';
+import React, { useEffect, useRef, memo } from 'react';
 import { Plugin } from 'molstar/lib/mol-plugin-ui/plugin';
+import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
+import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
+import { PluginSpec } from 'molstar/lib/mol-plugin/spec';
+import { MolViewSpec } from 'molstar/lib/extensions/mvs/behavior';
+import { PluginConfig } from 'molstar/lib/mol-plugin/config';
+import { MVSData } from 'molstar/lib/extensions/mvs/mvs-data';
+import { loadMVSData } from 'molstar/lib/extensions/mvs/components/formats';
+import { Scheduler } from 'molstar/lib/mol-task';
+import { SingleTaskQueue } from '../utils';
+import { atom, useAtom, useAtomValue, useStore } from 'jotai/index';
+import { StoryAtom, ActiveSceneAtom } from '../app/state/atoms';
+import { Story, SceneData } from '../app/state/types';
+import { getMVSData } from '../app/state/actions';
 
-/**
- * Extends the Window interface to include the molstar global object
- * @global
- */
-declare global {
-  interface Window {
-    /**
-     * The global molstar object loaded from CDN
-     */
-    molstar: any;
-  }
-}
-
-// Track symbol registration globally to ensure it only happens once across all instances
-let symbolsRegistered = false;
-
-/**
- * Props for the MolstarViewer component
- * @interface MolstarViewerProps
- * @property {string} [width] - Width of the viewer container (default: '800px')
- * @property {string} [height] - Height of the viewer container (default: '600px')
- */
-interface MolstarViewerProps {
+interface MVSViewerProps {
   width?: string;
   height?: string;
+  onError?: (error: Error) => void;
+  onStateChange?: (stateIndex: number) => void;
 }
 
-/**
- * Interface for the MolstarViewer ref methods
- * @interface MolstarViewerRef
- * @property {(pdbId: string) => Promise<void>} loadPdbById - Method to load a PDB structure by ID
- */
-export interface MolstarViewerRef {
-  loadPdbById: (pdbId: string) => Promise<void>;
+export interface MVSViewerRef {
+  loadMVSSnapshot: (snapshot: MVSData) => Promise<void>;
+  loadMVSFile: (data: Uint8Array | string, format: 'mvsj' | 'mvsx') => Promise<void>;
+  getCurrentStateIndex: () => number;
+  getTotalStates: () => number;
+  setCurrentState: (index: number) => void;
+  plugin: PluginUIContext;
 }
 
-/* import from molstar/lib/mol-plugin-ui/plugin */
-export function MolstarUI({ model }: { model: MolViewSpecModel }) {
-  return <div style={{ position: 'relative', width: '100%', height: '100%' }}> 
-  <Plugin plugin={model.molstar.plugin} />
-  </div>
+function createViewer() {
+  const spec = DefaultPluginUISpec();
+  const plugin = new PluginUIContext({
+    ...spec,
+    layout: {
+      initial: {
+        isExpanded: false,
+        showControls: false,
+      },
+    },
+    components: {
+      remoteState: 'none',
+    },
+    behaviors: [...spec.behaviors, PluginSpec.Behavior(MolViewSpec)],
+    config: [
+      [PluginConfig.Viewport.ShowAnimation, false],
+      [PluginConfig.Viewport.ShowSelectionMode, false],
+      [PluginConfig.Viewport.ShowExpand, false],
+      [PluginConfig.Viewport.ShowControls, false],
+    ],
+  });
+  return plugin;
 }
 
-/**
- * MolstarViewer component for molecular structure visualization
- * Handles initialization of Mol* viewer and programmatic MVS generation
- * 
- * @component
- * @param {MolstarViewerProps} props - Component props
- * @param {React.Ref<MolstarViewerRef>} ref - Forwarded ref for parent component access
- * @returns {JSX.Element} The MolstarViewer component
- */
-const MolstarViewer = forwardRef<MolstarViewerRef, MolstarViewerProps>(({
-  width = '800px',
-  height = '600px',
-}, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const model = useModel();
-  const searchState = useBehavior(model.state.search);
+class MVSViewModel {
+  private queue = new SingleTaskQueue();
+  readonly plugin: PluginUIContext;
+  store: ReturnType<typeof useStore> | undefined = undefined;
+  private onError?: (error: Error) => void;
+  private onStateChange?: (index: number) => void;
+  private currentStateIndex = 0;
+
+  constructor(onError?: (error: Error) => void, onStateChange?: (index: number) => void) {
+    this.plugin = createViewer();
+    this.onError = onError;
+    this.onStateChange = onStateChange;
+    this.init();
+  }
+
+  private async init() {
+    await this.plugin.init();
+    // Init the container now so canvas3d is ready
+    this.plugin.initContainer();
+  }
+
+  async loadStory(story: Story, scene: SceneData) {
+    if (!scene) return;
   
-  // Handle one-time symbol registration
-  useEffect(() => {
-    if (!window.molstar || symbolsRegistered) return;
-    
-    try {
-      // Register any required symbols here
-      symbolsRegistered = true;
-    } catch (err) {
-      console.error('Failed to register Mol* symbols:', err);
+    this.queue.run(async () => {
+      try {
+        this.store?.set(IsLoadingAtom, true);
+        const data = await getMVSData(story, [scene]);
+        await this.plugin.initialized;
+        // The plugin.initialized get triggered after plugin.init(),
+        // before plugin.initContainer() is called. Depending on the use case,
+        // there was an edge case where the `loadMVSData` was called before
+        // the canvas was ready.
+        await Scheduler.immediatePromise();
+        await loadMVSData(this.plugin, data, data instanceof Uint8Array ? 'mvsx' : 'mvsj');
+      } catch (error) {
+        console.error('Error loading MVS data into Molstar:', error);
+      } finally {
+        this.store?.set(IsLoadingAtom, false);
+      }
+    });
+  }
+  /*
+  getCurrentStateIndex(): number {
+    return this.currentStateIndex;
+  }
+
+  getTotalStates(): number {
+    return this.plugin.managers.structure.hierarchy.current.structures.length;
+  }
+
+  setCurrentState(index: number) {
+    const totalStates = this.getTotalStates();
+    if (index >= 0 && index < totalStates) {
+      this.currentStateIndex = index;
+      this.onStateChange?.(index);
     }
-  }, []);
-  
-  // Initialize viewer
-  useEffect(() => {
-    let mounted = true;
+  }
 
-    const initViewer = async () => {
-      if (!containerRef.current || !window.molstar) return;
+  dispose() {
+    if (this.plugin) {
+      this.plugin.dispose();
+    }
+  }
+    */
+}
 
-      try {
-        const viewer = await window.molstar.Viewer.create(
-          containerRef.current,
-          { 
-            layoutIsExpanded: false, 
-            layoutShowControls: false,
-            layoutShowLeftPanel: false,
-            layoutShowRightPanel: false
-          }
-        );
-
-        if (!mounted) {
-          viewer.plugin.dispose();
-          return;
-        }
-
-        viewerRef.current = viewer;
-
-        const { result } = searchState;
-        if (result.type === 'result' && result.value?.id) {
-          const pdbId = result.value.id;
-          try {
-            await viewer.plugin.clear();
-            await viewer.loadStructureFromUrl(
-              `https://www.ebi.ac.uk/pdbe/entry-files/download/${pdbId}_updated.cif`,
-              'mmcif'
-            );
-            viewer.plugin.representation.update({ type: 'cartoon' });
-          } catch (err) {
-            console.error('Failed to load structure:', err);
-            setError(`Failed to load structure: ${err}`);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to initialize viewer:', err);
-        setError(`Failed to initialize viewer: ${err}`);
-      }
-    };
-
-    initViewer();
-
-    return () => {
-      mounted = false;
-      if (viewerRef.current) {
-        viewerRef.current.plugin.dispose();
-        viewerRef.current = null;
-      }
-    };
-  }, [searchState]);
-
-  // Watch for search state changes
-  useEffect(() => {
-    const { result } = searchState;
-    if (!result || result.type !== 'result' || !result.value?.id || !viewerRef.current) return;
-    const pdbId = result.value.id;
-
-    const loadStructure = async () => {
-      try {
-        const viewer = viewerRef.current;
-        await viewer.plugin.clear();
-        await viewer.loadStructureFromUrl(
-          `https://www.ebi.ac.uk/pdbe/entry-files/download/${pdbId}_updated.cif`,
-          'mmcif'
-        );
-      } catch (err) {
-        console.error('Failed to load structure:', err);
-        setError(`Failed to load structure: ${err}`);
-      }
-    };
-
-    loadStructure();
-  }, [searchState]);
-
-  return (
-    <div className="viewer-container panel">
-      <div className="panel-header">Structure Viewer</div>
-      {error && <div className="error-display">{error}</div>}
-      <div ref={containerRef} style={{ width, height }} />
-    </div>
-  );
+const PluginWrapper = memo(function _PluginWrapper({ plugin }: { plugin: PluginUIContext }) {
+  return <Plugin plugin={plugin} />;
 });
 
-export default MolstarViewer;
+
+let _modelInstance: MVSViewModel | null = null;
+const IsLoadingAtom = atom(false);
+
+function LoadingIndicator() {
+  const isLoading = useAtomValue(IsLoadingAtom);
+  if (!isLoading) return null;
+
+  return (
+    <div className='absolute start-0 top-0 ps-4 pt-1' style={{ zIndex: 1000 }}>
+      <span className='text-sm text-gray-500'>Loading...</span>
+    </div>
+  );
+}
+
+export function MVSViewer() {
+  const modelRef = useRef<MVSViewModel>();
+  
+  if (!_modelInstance) {
+    _modelInstance = new MVSViewModel();
+  }
+  
+  if (!modelRef.current) {
+    modelRef.current = _modelInstance;
+  }
+
+  const model = modelRef.current;
+  const story = useAtomValue(StoryAtom);
+  const scene = useAtomValue(ActiveSceneAtom);
+
+  model.store = useStore();
+
+  useEffect(() => {
+    model.loadStory(story, scene);
+  }, [model, story, scene]);
+
+  return (
+    <div className='rounded overflow-hidden w-full h-full border border-border bg-background relative'>
+      <div className='w-full h-full relative'>
+        <PluginWrapper plugin={model.plugin} />
+        <LoadingIndicator />
+      </div>
+    </div>
+  );
+}
+
+MVSViewer.displayName = 'MVSViewer';
+
+export default MVSViewer;

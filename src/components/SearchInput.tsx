@@ -1,5 +1,6 @@
 import React from 'react';
-import { useModel, useBehavior } from '../model';
+import { useAtom } from 'jotai';
+import { SearchAtom } from '../app/state/atoms';
 
 /**
  * SearchInput component for molecular structure search
@@ -9,15 +10,32 @@ import { useModel, useBehavior } from '../model';
  * @returns {JSX.Element} The SearchInput component
  */
 const SearchInput: React.FC = () => {
-  const model = useModel();
-  const searchState = useBehavior(model.state.search);
+  const [searchState, setSearchState] = useAtom(SearchAtom);
   const { query, isLoading } = searchState;
 
   const updateQuery = (newQuery: string) => {
-    model.state.search.next({
+    setSearchState({
       ...searchState,
       query: newQuery
     });
+  };
+
+  const handleSearch = () => {
+    if (!query.trim() || isLoading) return;
+    
+    setSearchState({
+      ...searchState,
+      isLoading: true,
+      error: null
+    });
+
+    // For now, we'll just simulate a search delay
+    setTimeout(() => {
+      setSearchState({
+        ...searchState,
+        isLoading: false
+      });
+    }, 1000);
   };
 
   return (
@@ -31,13 +49,13 @@ const SearchInput: React.FC = () => {
           placeholder="Enter PDB ID (e.g., 1cbs, 1og2)..."
           value={query}
           onChange={(e) => updateQuery(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && !isLoading && model.searchStructure()}
+          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           disabled={isLoading}
         />
       </div>
       <button 
         className="search-button" 
-        onClick={model.searchStructure} 
+        onClick={handleSearch} 
         disabled={isLoading || !query.trim()}
       >
         {isLoading ? 'Searching...' : 'Search'}
