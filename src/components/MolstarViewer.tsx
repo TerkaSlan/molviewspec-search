@@ -81,7 +81,7 @@ class MVSViewModel {
     this.queue.run(async () => {
       try {
         this.store?.set(IsLoadingAtom, true);
-        const data = await getMVSData(story, [scene]);
+        const data = await getMVSData(story, [scene, scene]);
         await this.plugin.initialized;
         // The plugin.initialized get triggered after plugin.init(),
         // before plugin.initContainer() is called. Depending on the use case,

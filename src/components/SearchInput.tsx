@@ -1,6 +1,6 @@
 import React from 'react';
-import { useAtom } from 'jotai';
-import { SearchAtom } from '../app/state/atoms';
+import { useAtom, useSetAtom } from 'jotai';
+import { SearchAtom, CurrentStoryAtom } from '../app/state/atoms';
 
 /**
  * SearchInput component for molecular structure search
@@ -11,6 +11,7 @@ import { SearchAtom } from '../app/state/atoms';
  */
 const SearchInput: React.FC = () => {
   const [searchState, setSearchState] = useAtom(SearchAtom);
+  const setCurrentStory = useSetAtom(CurrentStoryAtom);
   const { query, isLoading } = searchState;
 
   const updateQuery = (newQuery: string) => {
@@ -20,7 +21,7 @@ const SearchInput: React.FC = () => {
     });
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!query.trim() || isLoading) return;
     
     setSearchState({
@@ -29,13 +30,22 @@ const SearchInput: React.FC = () => {
       error: null
     });
 
-    // For now, we'll just simulate a search delay
-    setTimeout(() => {
-      setSearchState({
-        ...searchState,
-        isLoading: false
-      });
-    }, 1000);
+    try {
+      // Update the current story with the new PDB ID
+      setCurrentStory(query.trim().toLowerCase());
+      
+      setSearchState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: null
+      }));
+    } catch (error) {
+      setSearchState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'An error occurred'
+      }));
+    }
   };
 
   return (

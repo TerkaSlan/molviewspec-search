@@ -5,13 +5,14 @@ interface MolecularVisualizationConfig {
   proteinColor: string;
   ligandColor: string;
   ligandLabel?: string;
+  pdbId: string;
 }
 
 const createInitialJavaScriptCode = (config: MolecularVisualizationConfig): string => {
   return `// Create a builder for molecular visualization
 // Define the structure with full type support
 const structure = builder
-  .download({url: 'https://www.ebi.ac.uk/pdbe/entry-files/1cbs.bcif'})
+  .download({url: 'https://www.ebi.ac.uk/pdbe/entry-files/${config.pdbId}.bcif'})
   .parse({ format: 'bcif' })
   .modelStructure({});
 
@@ -24,40 +25,43 @@ structure
 // Add ligand
 structure
   .component({ selector: 'ligand' })
-  .label({ text: '${config.ligandLabel || 'Retinoic Acid'}' })
-  .focus({})
   .representation({ type: 'ball_and_stick' })
   .color({ color: '${config.ligandColor}' });
 `;
 };
 
-export const SimpleStory: Story = {
-  metadata: { title: 'Simple Molecular Visualization Story' },
+export const createTemplateStory = (pdbId: string): Story => ({
+  metadata: { title: `Structure ${pdbId.toUpperCase()}` },
   javascript: '// Common code for all scenes\n',
   scenes: [
     {
       id: UUID.createv4(),
-      header: 'Awesome Thing 01',
+      header: 'Default View',
       key: 'scene_01',
       description:
-        '# Retinoic Acid Visualization\n\nShowing a protein structure with retinoic acid ligand in green cartoon representation.',
+        `# ${pdbId.toUpperCase()} Structure\n\nShowing the protein structure in cartoon representation with ligands in ball-and-stick representation.`,
       javascript: createInitialJavaScriptCode({
         proteinColor: 'green',
         ligandColor: '#cc3399',
-        ligandLabel: 'Retinoic Acid',
+        ligandLabel: 'Ligand',
+        pdbId: pdbId.toLowerCase()
       }),
     },
     {
       id: UUID.createv4(),
-      header: 'Awesome Thing 02',
+      header: 'Alternative View',
       key: 'scene_02',
-      description: '# Alternative Visualization\n\nSame structure but with blue cartoon and orange ligand coloring.',
+      description: `# ${pdbId.toUpperCase()} Alternative View\n\nAlternative coloring scheme for better visualization.`,
       javascript: createInitialJavaScriptCode({
         proteinColor: 'blue',
         ligandColor: 'orange',
-        ligandLabel: 'Retinoic Acid',
+        ligandLabel: 'Ligand',
+        pdbId: pdbId.toLowerCase()
       }),
     },
   ],
   assets: [],
-};
+});
+
+// Keep the SimpleStory as a demo/example
+export const SimpleStory: Story = createTemplateStory('1cbs');

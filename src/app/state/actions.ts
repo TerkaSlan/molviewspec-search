@@ -34,11 +34,9 @@ async function getMVSSnapshot(story: Story, scene: SceneData) {
 
 
 export async function getMVSData(story: Story, scenes: SceneData[] = story.scenes): Promise<MVSData | Uint8Array> {
-    // Async in case of creating a ZIP archite with static assets
 
     const snapshots: Snapshot[] = [];
 
-    // TODO: not sure if Promise.all would be better here.
     for (const scene of scenes) {
         const snapshot = await getMVSSnapshot(story, scene);
         snapshots.push(snapshot);
