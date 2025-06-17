@@ -1,6 +1,12 @@
-import { BehaviorSubject, Observable, throttleTime } from 'rxjs';
+import { BehaviorSubject, Observable, throttleTime, map, filter } from 'rxjs';
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
+import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
+import { loadMVSData } from 'molstar/lib/extensions/mvs/components/formats';
+import { PluginSpec } from 'molstar/lib/mol-plugin/spec';
+import { MolViewSpec } from 'molstar/lib/extensions/mvs/behavior';
+import { PluginConfig } from 'molstar/lib/mol-plugin/config';
+import { MVSData, Snapshot } from 'molstar/lib/extensions/mvs/mvs-data';
 
 /**
  * Interface representing structure information and metadata
@@ -14,7 +20,7 @@ export interface StructureInfo {
 }
 
 /**
- * Interface representing a structure search result
+ * Interface representing a structure  searchresult
  * @interface SearchResult
  * @property {string} id - The identifier of the structure (e.g., PDB ID)
  * @property {StructureInfo} structureInfo - Metadata and information about the structure
@@ -51,25 +57,65 @@ class MolStarWrapper {
   private pluginInitialized: (() => void) | null = null;
   readonly initialized = new Promise<void>(res => {
     this.pluginInitialized = res;
-  })
+  });
 
   plugin: PluginUIContext = undefined as any;
 
-  private async init() {
-    // create plugin spec, await plugin.init(), ...
-    this.plugin = new PluginUIContext(spec); // include MVS behavior
-    await this.plugin.init();
-
-    this.pluginInitialized?.();
-  }
-  
-  async loadMVS() {
-    await this.initialized;
+  private createViewer() {
+    const spec = DefaultPluginUISpec();
+    const plugin = new PluginUIContext({
+      ...spec,
+      layout: {
+        initial: {
+          isExpanded: false,
+          showControls: false,
+        },
+      },
+      components: {
+        disableDragOverlay: true,
+        remoteState: 'none',
+      },
+      behaviors: [...spec.behaviors, PluginSpec.Behavior(MolViewSpec)],
+      config: [
+        [PluginConfig.Viewport.ShowAnimation, false],
+        [PluginConfig.Viewport.ShowSelectionMode, false],
+        [PluginConfig.Viewport.ShowExpand, false],
+        [PluginConfig.Viewport.ShowControls, false],
+      ],
+    });
+    return plugin;
   }
 
   constructor() {
-    this.init();
+    this.plugin = this.createViewer();
+    this.plugin.init().then(() => {
+      if (this.pluginInitialized) {
+        this.pluginInitialized();
+      }
+    });
   }
+
+  async waitForInit() {
+    await this.initialized;
+  }
+}
+
+/**
+ * Interface representing the search state
+ */
+export interface SearchState {
+  query: string;
+  result: AsyncResult<SearchResult | null>;
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Interface representing the viewer state
+ */
+export interface ViewerState {
+  mvsDescription: string | null;
+  currentMVS: MVSData | null;
 }
 
 /**
@@ -77,6 +123,7 @@ class MolStarWrapper {
  * Manages application state and provides data operations
  * @class MolViewSpecModel
  */
+
 export class MolViewSpecModel {
 
   readonly molstar = new MolStarWrapper();
@@ -86,26 +133,19 @@ export class MolViewSpecModel {
    * @public
    */
   state = {
-    /** Current search query */
-    searchQuery: new BehaviorSubject<string>(''),
-    
-    /** Current search result */
-    result: new BehaviorSubject<AsyncResult<SearchResult | null>>({ 
-      type: 'result',
-      value: null
+    /** Search-related state */
+    search: new BehaviorSubject<SearchState>({
+      query: '',
+      result: { type: 'result', value: null },
+      isLoading: false,
+      error: null
     }),
-    
-    /** Loading state */
-    // isLoading: new BehaviorSubject<boolean>(false),
-    
-    /** Error state */
-    // error: new BehaviorSubject<string | null>(null),
-    
-    /** MVS Description from the viewer */
-    mvsDescription: new BehaviorSubject<string | null>(null),
-    
-    /** Current MVS snapshot for download */
-    currentMVS: new BehaviorSubject<any>(null)
+
+    /** Viewer-related state */
+    viewer: new BehaviorSubject<ViewerState>({
+      mvsDescription: null,
+      currentMVS: null
+    })
   };
 
   /** Stored subscription cleanup functions */
@@ -132,24 +172,76 @@ export class MolViewSpecModel {
     this.unsubs = [];
   }
 
+  constructor() {
+    this.initialize();
+  }
+
+  private async initialize() {
+    await this.molstar.waitForInit();
+    this.mount();
+  }
+
   mount() {
-    // this.subscribe(this.state.searchQuery
-    //  .pipe(throttleTime(33, undefined, { leading: false, trailing: true })),
-//
-  //    (query) => {
-    //  this.searchStructure(query);
-    //});
+    // Subscribe to search state changes to trigger structure loading
+    this.subscribe(
+      this.state.search.pipe(
+        map(state => state.result),
+        // Only trigger on successful results
+        filter(result => result.type === 'result' && result.value !== null)
+      ),
+      async (result) => {
+        if (result.type !== 'result' || !result.value) return;
 
-    this.subscribe(this.state.result, (res) => {
-      if (res.type !== 'result' || !res.value) return;
-
-      const mvs = buildMVSState(res.value);
-
-      this.state.stateDescription.next(mvs.description);
-      this.currentMVS = mvs.data;
-      this.molstar.loadMVS(mvs.data);
-      // loadMVS(this.plugin, mvs)
-    });
+        try {
+          const pdbId = result.value.id;
+          const plugin = this.molstar.plugin;
+          await plugin.clear();
+          
+          // Build the MVS
+          const MVSData = window.molstar.PluginExtensions.mvs.MVSData;
+          const loadMVS = window.molstar.PluginExtensions.mvs.loadMVS;
+          
+          const builder = MVSData.createBuilder();
+          const structure = builder
+            .download({ url: `https://www.ebi.ac.uk/pdbe/entry-files/download/${pdbId}_updated.cif` })
+            .parse({ format: 'mmcif' })
+            .modelStructure();
+          
+          structure
+            .component({ selector: 'polymer' })
+            .representation({ type: 'cartoon' });
+          
+          structure
+            .component({ selector: 'ligand' })
+            .representation({ type: 'ball_and_stick' });
+          
+          const mvsDescription = `### PDB Structure ${pdbId.toUpperCase()}
+- Cartoon representation of protein
+- Ball and stick representation of ligands`;
+          
+          const snapshot = builder.getSnapshot({
+            title: `${pdbId.toUpperCase()} Structure Visualization`,
+            description: mvsDescription,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Update viewer state
+          this.state.viewer.next({
+            mvsDescription,
+            currentMVS: snapshot
+          });
+          
+          // Load the MVS
+          await loadMVS(plugin, snapshot, { replaceExisting: true });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.state.search.next({
+            ...this.state.search.value,
+            error: errorMessage
+          });
+        }
+      }
+    );
   }
 
   private currentMVS: any = undefined;
@@ -164,28 +256,34 @@ export class MolViewSpecModel {
    * @returns {Promise<void>}
    */
   searchStructure = async () => {
-    const query = this.state.searchQuery.value;
+    const currentState = this.state.search.value;
+    const query = currentState.query;
+    
     if (!query.trim()) return;
     
-    // Update search query
-    // this.state.searchQuery.next(query);
-    
-    // Set loading state
-    this.state.isLoading.next(true);
-    this.state.error.next(null);
+    // Update loading state
+    this.state.search.next({
+      ...currentState,
+      isLoading: true,
+      error: null
+    });
     
     try {
-      // In a real application, this would be an API call
-      // For now, we'll simulate some data
       const result = await this.fetchStructureData(query);
       
-      // Update the current result
-      this.state.currentResult.next(result);
+      // Update the search state with the result
+      this.state.search.next({
+        ...currentState,
+        isLoading: false,
+        result: { type: 'result', value: result }
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      this.state.error.next(errorMessage);
-    } finally {
-      this.state.isLoading.next(false);
+      this.state.search.next({
+        ...currentState,
+        isLoading: false,
+        error: errorMessage
+      });
     }
   }
 
@@ -258,8 +356,6 @@ interface ModelProviderProps {
  * @returns {JSX.Element} Provider component
  */
 export const ModelProvider: React.FC<ModelProviderProps> = ({ children }) => {
-  // const [model] = useState(() => new MolViewSpecModel());
-
   const modelRef = useRef<MolViewSpecModel | null>(null);
   if (!modelRef.current) {
     modelRef.current = new MolViewSpecModel();
@@ -267,11 +363,6 @@ export const ModelProvider: React.FC<ModelProviderProps> = ({ children }) => {
   const model = modelRef.current;
 
   useEffect(() => {
-    // model.mount(); // init subscriptions
-
-    // Load default structure on startup
-    // model.searchStructure('1cbs');
-    
     return () => {
       model.dispose();
     };
@@ -295,21 +386,18 @@ export function useModel() {
     throw new Error('useModel must be used within a ModelProvider');
   }
   return context;
-} 
-
-// creates a singleton model instance
-export function useSearchModel() {
-  const modelRef = useRef<MolViewSpecModel | null>(null);
-  if (!modelRef.current) {
-    modelRef.current = new MolViewSpecModel();
-  }
-
-  useEffect(() => {
-    modelRef.current!.mount();
-    return () => {
-      modelRef.current!.dispose();
-    };
-  }, []);
-
-  return modelRef.current;
 }
+
+/**
+ * Creates selectors for deriving state from the model
+ * @param model The MolViewSpecModel instance
+ * @returns Object containing selector functions
+ */
+export const createSelectors = (model: MolViewSpecModel) => ({
+  isLoading: () => model.state.search.pipe(
+    map(state => state.isLoading)
+  ),
+  hasError: () => model.state.search.pipe(
+    map(state => !!state.error)
+  )
+});

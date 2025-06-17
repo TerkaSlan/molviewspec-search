@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useModel, useBehavior } from '../model';
 
 /**
@@ -9,20 +9,16 @@ import { useModel, useBehavior } from '../model';
  * @returns {JSX.Element} The SearchInput component
  */
 const SearchInput: React.FC = () => {
-  // const [query, setQuery] = useState<string>('');
   const model = useModel();
-  const query = useBehavior(model.state.searchQuery);
-  const isLoading = useBehavior(model.state.result).type === 'loading';
+  const searchState = useBehavior(model.state.search);
+  const { query, isLoading } = searchState;
 
-  /**
-   * Handle search submission
-   * Triggers the model to search and load the structure with the provided ID
-   */
-  /* const handleSearch = () => {
-    if (query.trim()) {
-      model.searchStructure(query);
-    }
-  }; */
+  const updateQuery = (newQuery: string) => {
+    model.state.search.next({
+      ...searchState,
+      query: newQuery
+    });
+  };
 
   return (
     <div className="search-container">
@@ -34,7 +30,7 @@ const SearchInput: React.FC = () => {
           type="text"
           placeholder="Enter PDB ID (e.g., 1cbs, 1og2)..."
           value={query}
-          onChange={(e) => model.state.searchQuery.next(e.target.value)}
+          onChange={(e) => updateQuery(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && !isLoading && model.searchStructure()}
           disabled={isLoading}
         />
