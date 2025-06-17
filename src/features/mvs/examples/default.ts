@@ -1,18 +1,18 @@
-import { Story } from '../types';
+import { Story } from '../../types';
 import { UUID } from 'molstar/lib/mol-util';
 
 interface MolecularVisualizationConfig {
   proteinColor: string;
   ligandColor: string;
   ligandLabel?: string;
-  pdbId: string;
+  proteinId: string;
 }
 
 const createInitialJavaScriptCode = (config: MolecularVisualizationConfig): string => {
   return `// Create a builder for molecular visualization
 // Define the structure with full type support
 const structure = builder
-  .download({url: 'https://www.ebi.ac.uk/pdbe/entry-files/${config.pdbId}.bcif'})
+  .download({url: 'https://alphafold.ebi.ac.uk/files/AF-${config.proteinId}-F1-model_v4.bcif'})
   .parse({ format: 'bcif' })
   .modelStructure({});
 
@@ -30,8 +30,8 @@ structure
 `;
 };
 
-export const createTemplateStory = (pdbId: string): Story => ({
-  metadata: { title: `Structure ${pdbId.toUpperCase()}` },
+export const createTemplateStory = (proteinId: string): Story => ({
+  metadata: { title: `Structure ${proteinId.toUpperCase()}` },
   javascript: '// Common code for all scenes\n',
   scenes: [
     {
@@ -39,24 +39,24 @@ export const createTemplateStory = (pdbId: string): Story => ({
       header: 'Default View',
       key: 'scene_01',
       description:
-        `# ${pdbId.toUpperCase()} Structure\n\nShowing the protein structure in cartoon representation with ligands in ball-and-stick representation.`,
+        `# ${proteinId.toUpperCase()} Structure\n\nShowing the protein structure in cartoon representation with ligands in ball-and-stick representation.`,
       javascript: createInitialJavaScriptCode({
         proteinColor: 'green',
         ligandColor: '#cc3399',
         ligandLabel: 'Ligand',
-        pdbId: pdbId.toLowerCase()
+        proteinId: proteinId
       }),
     },
     {
       id: UUID.createv4(),
       header: 'Alternative View',
       key: 'scene_02',
-      description: `# ${pdbId.toUpperCase()} Alternative View\n\nAlternative coloring scheme for better visualization.`,
+      description: `# ${proteinId.toUpperCase()} Alternative View\n\nAlternative coloring scheme for better visualization.`,
       javascript: createInitialJavaScriptCode({
         proteinColor: 'blue',
         ligandColor: 'orange',
         ligandLabel: 'Ligand',
-        pdbId: pdbId.toLowerCase()
+        proteinId: proteinId
       }),
     },
   ],
@@ -64,4 +64,4 @@ export const createTemplateStory = (pdbId: string): Story => ({
 });
 
 // Keep the SimpleStory as a demo/example
-export const SimpleStory: Story = createTemplateStory('1cbs');
+export const SimpleStory: Story = createTemplateStory('Q8N9T8');

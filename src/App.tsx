@@ -1,7 +1,7 @@
 import React from 'react';
-import SearchInput from './components/SearchInput';
-import DescriptionPanel from './components/DescriptionPanel';
-import { MVSExample } from './components/MVSExample';
+import SearchInput from './features/search/SearchInput';
+import { SearchResults } from './features/search/SearchResults';
+import { MVSExample } from './features/mvs/MVSExample';
 /**
  * Main application component
  * Organizes the UI layout and wraps components with the ModelProvider
@@ -22,7 +22,10 @@ const App: React.FC = () => {
       <div className="main-content">
         <div className="left-panel panel">
           <div className="panel-header">Search</div>
-          <SearchInput />
+          <div className="panel-content">
+            <SearchInput />
+            <SearchResults />
+          </div>
         </div>
         
         <div className="center-panel">
@@ -31,7 +34,6 @@ const App: React.FC = () => {
         
         <div className="right-panel panel">
           <div className="panel-header">Structure Info</div>
-          <DescriptionPanel />
         </div>
       </div>
     </div>

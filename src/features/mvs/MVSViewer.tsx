@@ -8,11 +8,11 @@ import { PluginConfig } from 'molstar/lib/mol-plugin/config';
 import { MVSData } from 'molstar/lib/extensions/mvs/mvs-data';
 import { loadMVSData } from 'molstar/lib/extensions/mvs/components/formats';
 import { Scheduler } from 'molstar/lib/mol-task';
-import { SingleTaskQueue } from '../utils';
+import { SingleTaskQueue } from '../../utils';
 import { atom, useAtom, useAtomValue, useStore } from 'jotai/index';
-import { StoryAtom, ActiveSceneAtom } from '../app/state/atoms';
-import { Story, SceneData } from '../app/state/types';
-import { getMVSData } from '../app/state/actions';
+import { StoryAtom, ActiveSceneAtom } from './atoms';
+import { Story, SceneData } from '../types';
+import { getMVSData } from './actions';
 
 interface MVSViewerProps {
   width?: string;
@@ -96,29 +96,6 @@ class MVSViewModel {
       }
     });
   }
-  /*
-  getCurrentStateIndex(): number {
-    return this.currentStateIndex;
-  }
-
-  getTotalStates(): number {
-    return this.plugin.managers.structure.hierarchy.current.structures.length;
-  }
-
-  setCurrentState(index: number) {
-    const totalStates = this.getTotalStates();
-    if (index >= 0 && index < totalStates) {
-      this.currentStateIndex = index;
-      this.onStateChange?.(index);
-    }
-  }
-
-  dispose() {
-    if (this.plugin) {
-      this.plugin.dispose();
-    }
-  }
-    */
 }
 
 const PluginWrapper = memo(function _PluginWrapper({ plugin }: { plugin: PluginUIContext }) {
@@ -162,8 +139,8 @@ export function MVSViewer() {
   }, [model, story, scene]);
 
   return (
-    <div className='rounded overflow-hidden w-full h-full border border-border bg-background relative'>
-      <div className='w-full h-full relative'>
+    <div className='absolute inset-0'>
+      <div className='w-full h-full'>
         <PluginWrapper plugin={model.plugin} />
         <LoadingIndicator />
       </div>

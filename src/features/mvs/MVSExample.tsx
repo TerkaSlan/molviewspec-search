@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import MVSViewer from './MolstarViewer';
-import { SimpleStory } from '../app/state/examples/default';
+import MVSViewer from './MVSViewer';
+import { SimpleStory } from './examples/default';
 import { useSetAtom, useAtom } from 'jotai';
-import { StoryAtom, CurrentViewAtom } from '../app/state/atoms';
+import { StoryAtom, CurrentViewAtom } from './atoms';
 
 export function MVSExample() {
   const setStory = useSetAtom(StoryAtom);
@@ -44,37 +44,37 @@ export function MVSExample() {
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ marginBottom: '20px' }}>
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2">
         <button 
           onClick={handleLoadStory}
-          style={{ marginRight: '10px', padding: '8px 16px' }}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           Load Story
         </button>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
+      <div className="flex items-center gap-4">
         <button 
           onClick={handlePrevScene}
           disabled={currentSceneIndex === 0}
-          style={{ marginRight: '10px', padding: '8px 16px' }}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Previous Scene
         </button>
-        <span style={{ margin: '0 10px' }}>
+        <span>
           Scene {currentSceneIndex + 1} of {SimpleStory.scenes.length}
         </span>
         <button 
           onClick={handleNextScene}
           disabled={currentSceneIndex === SimpleStory.scenes.length - 1}
-          style={{ padding: '8px 16px' }}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next Scene
         </button>
       </div>
 
-      <div style={{ width: '800px', height: '600px' }}>
+      <div className="relative aspect-square w-full">
         <MVSViewer />
       </div>
     </div>

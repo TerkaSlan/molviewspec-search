@@ -1,4 +1,4 @@
-import { SceneData, Story } from './types';
+import { SceneData, Story } from '../types';
 import { MVSData, Snapshot } from 'molstar/lib/extensions/mvs/mvs-data';
 import { Zip } from 'molstar/lib/mol-util/zip/zip';
 

@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 import { SimpleStory } from './examples/default';
-import { CurrentView, Story } from './types';
+import { CurrentView, Story } from '../types';
 import { createTemplateStory } from './examples/default';
 
 export const StoryAtom = atom<Story>(SimpleStory);
