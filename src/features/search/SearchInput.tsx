@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSearch } from './hooks/useSearch';
 import { useSetAtom } from 'jotai';
 import { StoryAtom, CurrentViewAtom } from '../mvs/atoms';
-import { createTemplateStory } from '../mvs/examples/default';
+import { createSuperpositionTemplateStory } from '../mvs/examples/superposition';
 
 interface SearchInputProps {
   className?: string;
@@ -16,21 +16,24 @@ export function SearchInput({ className = '' }: SearchInputProps) {
 
   const handleSearch = async () => {
     try {
-      // Create a new story based on the search query
-      const newStory = createTemplateStory(inputValue);
-      setStory(newStory);
-      setCurrentView({ 
-        type: 'scene', 
-        id: newStory.scenes[0].id, 
-        subview: '3d-view' 
-      });
-
-      // Perform AlphaFind search
-      await search({
+      // Perform AlphaFind search first to get results
+      const searchResponse = await search({
         query: inputValue,
         limit: 10,
         superposition: true
       });
+
+      // If we have results, create a superposition story with the first result
+      if (searchResponse.results && searchResponse.results.length > 0) {
+        const targetProteinId = searchResponse.results[0].object_id;
+        const newStory = createSuperpositionTemplateStory(inputValue, targetProteinId);
+        setStory(newStory);
+        setCurrentView({ 
+          type: 'scene', 
+          id: newStory.scenes[0].id, 
+          subview: '3d-view' 
+        });
+      }
     } catch (error) {
       console.error('Search failed:', error);
     }
