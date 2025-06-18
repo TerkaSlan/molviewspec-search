@@ -1,6 +1,6 @@
 import React from 'react';
-import SearchInput from './features/search/SearchInput';
-import { SearchResults } from './features/search/SearchResults';
+import { SearchContainer } from './features/search/SearchContainer';
+import { SearchResultsContainer } from './features/search/SearchResultsContainer';
 import { MVSExample } from './features/mvs/MVSExample';
 /**
  * Main application component
@@ -23,8 +23,8 @@ const App: React.FC = () => {
         <div className="left-panel panel">
           <div className="panel-header">Search</div>
           <div className="panel-content">
-            <SearchInput />
-            <SearchResults />
+            <SearchContainer />
+            <SearchResultsContainer />
           </div>
         </div>
         
