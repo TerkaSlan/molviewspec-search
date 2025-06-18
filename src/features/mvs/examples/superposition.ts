@@ -53,31 +53,6 @@ targetStructure
   return code;
 };
 
-export const createSuperpositionTemplateStory = (queryProteinId: string, superpositionData: SuperpositionData): Story => ({
-  metadata: { title: `Structure ${queryProteinId.toUpperCase()}` },
-  javascript: '// Common code for all scenes\n',
-  scenes: [
-    {
-      id: UUID.createv4(),
-      header: 'Default View',
-      key: 'scene_01',
-      description:
-        `Superposition of **${queryProteinId.toUpperCase()}** and **${superpositionData.object_id.toUpperCase()}**.\n\nAlignment metrics:\n- RMSD: ${superpositionData.rmsd.toFixed(2)}\n- TM-score: ${superpositionData.tm_score.toFixed(4)}\n- Aligned: ${(superpositionData.aligned_percentage * 100).toFixed(1)}%`,
-      javascript: createInitialJavaScriptCode({
-        queryProteinColor: 'green',
-        targetProteinColor: 'blue',
-        ligandColor: '#cc3399',
-        ligandLabel: 'Ligand',
-        queryProteinId: queryProteinId,
-        targetProteinId: superpositionData.object_id,
-        rotation_matrix: superpositionData.rotation_matrix,
-        translation_vector: superpositionData.translation_vector
-      }),
-    }
-  ],
-  assets: [],
-});
-
 export const createMultiSceneStory = (queryProteinId: string, results: SuperpositionData[]): Story => ({
   metadata: { title: `Structure ${queryProteinId.toUpperCase()} - Multiple Alignments` },
   javascript: '// Common code for all scenes\n',

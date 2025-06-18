@@ -1,7 +1,7 @@
 import { useSetAtom, useAtom } from 'jotai';
 import { useCallback } from 'react';
 import { searchStructures } from '../api';
-import { SearchStateAtom } from '../state';
+import { SearchStateAtom } from '../atoms';
 import { RecentSearchesAtom } from '../atoms';
 import { AlphaFindSearchOptions, SearchQuery, SearchError } from '../types';
 import { StoryAtom, CurrentViewAtom } from '../../mvs/atoms';
