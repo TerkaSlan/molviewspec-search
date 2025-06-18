@@ -1,7 +1,7 @@
 import React from 'react';
 import { SearchContainer } from './features/search/SearchContainer';
 import { SearchResultsContainer } from './features/search/SearchResultsContainer';
-import { MVSExample } from './features/mvs/MVSExample';
+import { MVSWrapper } from './features/mvs/MVSWrapper';
 /**
  * Main application component
  * Organizes the UI layout and wraps components with the ModelProvider
@@ -37,7 +37,7 @@ const App: React.FC = () => {
         </div>
         
         <div className="center-panel">
-          <MVSExample />
+          <MVSWrapper />
         </div>
       </div>
 
