@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { AlphaFindSearchState } from './types';
 
-export const API_BASE_URL = 'https://api.alphafind.dyn.cloud.e-infra.cz';
+export const API_BASE_URL = 'https://api.stage.alphafind.dyn.cloud.e-infra.cz';
 
 export const SearchStateAtom = atom<AlphaFindSearchState>({
     query: '',

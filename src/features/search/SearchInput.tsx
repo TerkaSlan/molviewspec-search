@@ -15,6 +15,8 @@ export function SearchInput({ className = '' }: SearchInputProps) {
   const setCurrentView = useSetAtom(CurrentViewAtom);
 
   const handleSearch = async () => {
+    if (!inputValue.trim()) return;
+    
     try {
       // Perform AlphaFind search first to get results
       const searchResponse = await search({
@@ -25,8 +27,8 @@ export function SearchInput({ className = '' }: SearchInputProps) {
 
       // If we have results, create a superposition story with the first result
       if (searchResponse.results && searchResponse.results.length > 0) {
-        const targetProteinId = searchResponse.results[0].object_id;
-        const newStory = createSuperpositionTemplateStory(inputValue, targetProteinId);
+        const firstResult = searchResponse.results[0];
+        const newStory = createSuperpositionTemplateStory(inputValue, firstResult);
         setStory(newStory);
         setCurrentView({ 
           type: 'scene', 

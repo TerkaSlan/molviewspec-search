@@ -1,12 +1,15 @@
-export interface AlphaFindStructure {
+export interface SuperpositionData {
     object_id: string;
-    tm_score: number;
-    rmsd: number;
     aligned_percentage: number;
+    rmsd: number;
+    rotation_matrix: number[][];
+    translation_vector: number[];
     sequence_aligned_percentage: number;
-    rotation_matrix?: number[][] | number[][][];
-    translation_vector?: number[] | number[][];
+    tm_score: number;
+    tm_score_target: number;
 }
+
+export interface AlphaFindStructure extends SuperpositionData {}
 
 export interface AlphaFindResponse {
     results?: AlphaFindStructure[];

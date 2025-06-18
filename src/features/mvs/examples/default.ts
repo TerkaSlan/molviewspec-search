@@ -64,4 +64,4 @@ export const createTemplateStory = (proteinId: string): Story => ({
 });
 
 // Keep the SimpleStory as a demo/example
-export const SimpleStory: Story = createTemplateStory('Q8N9T8');
+export const SimpleStory: Story = createTemplateStory('Q9FFD0');
