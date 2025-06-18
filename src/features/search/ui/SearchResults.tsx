@@ -52,22 +52,31 @@ interface ResultsTableProps {
 
 function ResultsTable({ results, onResultClick }: ResultsTableProps) {
     return (
-        <div className="results-table">
-            {results.map((result, index) => (
-                <div
-                    key={result.object_id}
-                    className="result-row"
-                    onClick={() => onResultClick(result)}
-                >
-                    <div className="result-index">{index + 1}</div>
-                    <div className="result-id">{result.object_id}</div>
-                    <div className="result-stats">
-                        <span>TM-score: {result.tm_score.toFixed(3)}</span>
-                        <span>RMSD: {result.rmsd.toFixed(3)}</span>
-                        <span>Aligned: {(result.aligned_percentage * 100).toFixed(1)}%</span>
-                    </div>
-                </div>
-            ))}
+        <div className="results-container">
+            <table className="results-table">
+                <thead>
+                    <tr>
+                        <th>Protein ID</th>
+                        <th>TM-score</th>
+                        <th>RMSD</th>
+                        <th>Aligned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {results.map((result) => (
+                        <tr
+                            key={result.object_id}
+                            className="result-row"
+                            onClick={() => onResultClick(result)}
+                        >
+                            <td className="protein-id">{result.object_id}</td>
+                            <td className="tm-score">{result.tm_score.toFixed(3)}</td>
+                            <td className="rmsd">{result.rmsd.toFixed(3)}</td>
+                            <td className="aligned">{(result.aligned_percentage * 100).toFixed(1)}%</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 }

@@ -82,8 +82,8 @@ body {
 .panel-header {
   font-size: 1.2rem;
   font-weight: bold;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  margin-bottom: 0px;
+  padding-bottom: 5px;
   border-bottom: 1px solid #eee;
   color: #24292e;
 }
@@ -506,4 +506,70 @@ button:disabled {
 .search-input.default-query {
   color: #666;
   font-style: italic;
+}
+
+.results-container {
+  width: 100%;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.results-table thead {
+  background-color: #f5f5f5;
+}
+
+.results-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.results-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.results-table .result-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.results-table .result-row:hover {
+  background-color: #f0f0f0;
+}
+
+.results-table .protein-id {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.results-table .tm-score,
+.results-table .rmsd,
+.results-table .aligned {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.search-progress,
+.search-error {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.search-progress {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.search-error {
+  background-color: #ffebee;
+  color: #d32f2f;
 } 

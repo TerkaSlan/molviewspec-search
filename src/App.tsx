@@ -22,10 +22,7 @@ const App: React.FC = () => {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1 className="app-title">Mol* MolViewSpec Search Demo</h1>
-        <p className="app-subtitle">
-          Search, create and visualize molecular structures through programmatic MolViewSpec generation
-        </p>
+        <h1 className="app-title">Visualize Protein Similarity through Molecular Stories</h1>
       </header>
       
       <div className="main-content">

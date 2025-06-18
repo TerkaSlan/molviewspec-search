@@ -37,48 +37,6 @@ npm start
 
 The application will open in your browser at `http://localhost:3000`.
 
-## Usage
-
-Enter a PDB ID in the search box to:
-1. Create a custom MVS programmatically for the requested structure
-2. Visualize the 3D structure with Mol* viewer
-3. View structure description in the right panel
-
-## How It Works
-
-When you search for a PDB ID, the application:
-
-```typescript
-// Build the MVS programmatically
-const builder = MVSData.createBuilder();
-const structure = builder
-  .download({ url: `https://www.ebi.ac.uk/pdbe/entry-files/download/${pdbId}_updated.cif` })
-  .parse({ format: 'mmcif' })
-  .modelStructure();
-
-structure
-  .component({ selector: 'polymer' })
-  .representation({ type: 'cartoon' });
-
-structure
-  .component({ selector: 'ligand' })
-  .representation({ type: 'ball_and_stick' });
-
-// Create snapshot with metadata using the builder directly
-const snapshot = builder.getSnapshot({
-  title: `${pdbId.toUpperCase()} Structure Visualization`,
-  description: `### PDB Structure ${pdbId.toUpperCase()}
-  - Cartoon representation of protein
-  - Ball and stick representation of ligands`,
-  timestamp: new Date().toISOString()
-});
-
-// Load the MVS with metadata
-await loadMVS(plugin, snapshot, { replaceExisting: true });
-```
-
-The metadata from the MVS is then displayed in the description panel, providing context for the visualization.
-
 ## Technologies Used
 
 - React
