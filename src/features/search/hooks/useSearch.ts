@@ -4,12 +4,16 @@ import { searchStructures } from '../api';
 import { SearchStateAtom } from '../state';
 import { RecentSearchesAtom } from '../atoms';
 import { AlphaFindSearchOptions, SearchQuery, SearchError } from '../types';
+import { StoryAtom, CurrentViewAtom } from '../../mvs/atoms';
+import { createMultiSceneStory } from '../../mvs/examples/superposition';
 
 const MAX_RECENT_SEARCHES = 10;
 
 export function useSearch() {
   const setSearchState = useSetAtom(SearchStateAtom);
   const [recentSearches, setRecentSearches] = useAtom(RecentSearchesAtom);
+  const setStory = useSetAtom(StoryAtom);
+  const setCurrentView = useSetAtom(CurrentViewAtom);
 
   const search = useCallback(async (options: Omit<AlphaFindSearchOptions, 'onProgress' | 'onPartialResults'>) => {
     const searchQuery: SearchQuery = {
@@ -51,6 +55,27 @@ export function useSearch() {
             results,
             lastUpdated: Date.now()
           }));
+
+          // Create and set story for partial results
+          if (results.length > 0) {
+            console.log('Creating story from partial results:', {
+              queryId: options.query,
+              numResults: results.length,
+              firstResult: results[0]
+            });
+            const newStory = createMultiSceneStory(options.query, results);
+            console.log('Created story:', {
+              title: newStory.metadata.title,
+              numScenes: newStory.scenes.length,
+              firstScene: newStory.scenes[0]
+            });
+            setStory(newStory);
+            setCurrentView({ 
+              type: 'scene', 
+              id: newStory.scenes[0].id, 
+              subview: '3d-view' 
+            });
+          }
         }
       });
 
@@ -62,6 +87,27 @@ export function useSearch() {
         error: null,
         lastUpdated: Date.now()
       }));
+
+      // Create and set final story with all results
+      if (finalResults.length > 0) {
+        console.log('Creating story from final results:', {
+          queryId: options.query,
+          numResults: finalResults.length,
+          firstResult: finalResults[0]
+        });
+        const newStory = createMultiSceneStory(options.query, finalResults);
+        console.log('Created final story:', {
+          title: newStory.metadata.title,
+          numScenes: newStory.scenes.length,
+          firstScene: newStory.scenes[0]
+        });
+        setStory(newStory);
+        setCurrentView({ 
+          type: 'scene', 
+          id: newStory.scenes[0].id, 
+          subview: '3d-view' 
+        });
+      }
 
       return response;
     } catch (error) {
@@ -78,7 +124,7 @@ export function useSearch() {
       }));
       throw error;
     }
-  }, [setSearchState, setRecentSearches]);
+  }, [setSearchState, setRecentSearches, setStory, setCurrentView]);
 
   return { search };
 } 

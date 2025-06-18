@@ -77,3 +77,26 @@ export const createSuperpositionTemplateStory = (queryProteinId: string, superpo
   ],
   assets: [],
 });
+
+export const createMultiSceneStory = (queryProteinId: string, results: SuperpositionData[]): Story => ({
+  metadata: { title: `Structure ${queryProteinId.toUpperCase()} - Multiple Alignments` },
+  javascript: '// Common code for all scenes\n',
+  scenes: results.map((result, index) => ({
+    id: UUID.createv4(),
+    header: `Alignment ${index + 1}`,
+    key: `scene_${(index + 1).toString().padStart(2, '0')}`,
+    description:
+      `Superposition of **${queryProteinId.toUpperCase()}** and **${result.object_id.toUpperCase()}**.\n\nAlignment metrics:\n- RMSD: ${result.rmsd.toFixed(2)}\n- TM-score: ${result.tm_score.toFixed(4)}\n- Aligned: ${(result.aligned_percentage * 100).toFixed(1)}%`,
+    javascript: createInitialJavaScriptCode({
+      queryProteinColor: 'green',
+      targetProteinColor: 'blue',
+      ligandColor: '#cc3399',
+      ligandLabel: 'Ligand',
+      queryProteinId: queryProteinId,
+      targetProteinId: result.object_id,
+      rotation_matrix: result.rotation_matrix,
+      translation_vector: result.translation_vector
+    }),
+  })),
+  assets: [],
+});

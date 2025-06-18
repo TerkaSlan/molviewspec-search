@@ -58,7 +58,7 @@ class MolstarViewModel {
         this.queue.run(async () => {
             try {
                 this.store?.set(IsLoadingAtom, true);
-                const data = await getMVSData(story, [scene, scene]);
+                const data = await getMVSData(story, story.scenes);
                 await this.plugin.initialized;
                 await Scheduler.immediatePromise();
                 await loadMVSData(this.plugin, data, data instanceof Uint8Array ? 'mvsx' : 'mvsj');

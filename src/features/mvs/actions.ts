@@ -6,9 +6,17 @@ const createStateProvider = (code: string) => {
     return new Function('builder', code);
 };
 
-
 async function getMVSSnapshot(story: Story, scene: SceneData) {
     try {
+        if (!scene) {
+            console.error('Scene is undefined');
+            throw new Error('Scene is undefined');
+        }
+        if (!scene.javascript) {
+            console.error('Scene javascript is undefined', scene);
+            throw new Error('Scene javascript is undefined');
+        }
+
         const stateProvider = createStateProvider(`
   async function _run_builder() {
         ${story.javascript}\n\n${scene.javascript}
@@ -31,7 +39,6 @@ async function getMVSSnapshot(story: Story, scene: SceneData) {
         throw error;
     }
 }
-
 
 export async function getMVSData(story: Story, scenes: SceneData[] = story.scenes): Promise<MVSData | Uint8Array> {
 

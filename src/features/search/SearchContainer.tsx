@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { StoryAtom, CurrentViewAtom } from '../mvs/atoms';
-import { createSuperpositionTemplateStory } from '../mvs/examples/superposition';
+import { createMultiSceneStory } from '../mvs/examples/superposition';
 import { SearchInputStateAtom, SearchQueryInputAtom } from './atoms';
 import { performSearch, updateSearchType } from './actions';
 import { SearchType } from './types';
@@ -41,10 +41,10 @@ export function SearchContainer() {
                         superposition: true
                     }
                 });
-    
+
+                // Create story with all results
                 if (searchResponse.results && searchResponse.results.length > 0) {
-                    const firstResult = searchResponse.results[0];
-                    const newStory = createSuperpositionTemplateStory(inputValue, firstResult);
+                    const newStory = createMultiSceneStory(inputValue, searchResponse.results);
                     setStory(newStory);
                     setCurrentView({ 
                         type: 'scene', 
