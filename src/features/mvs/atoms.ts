@@ -1,7 +1,6 @@
 import { atom } from 'jotai';
 import { SimpleStory } from './examples/default';
 import { CurrentView, Story } from '../types';
-import { createTemplateStory } from './examples/default';
 
 export const StoryAtom = atom<Story>(SimpleStory);
 
@@ -44,22 +43,3 @@ export const DescriptionAtom = atom<DescriptionState>({
   description: null,
   isLoading: false
 });
-
-// Create a derived atom that updates the story based on search query
-export const CurrentStoryAtom = atom(
-  (get) => get(StoryAtom),
-  (get, set, pdbId: string) => {
-    const newStory = createTemplateStory(pdbId);
-    set(StoryAtom, newStory);
-    set(CurrentViewAtom, { 
-      type: 'scene', 
-      id: newStory.scenes[0].id, 
-      subview: '3d-view' 
-    });
-    set(DescriptionAtom, {
-      title: newStory.metadata.title,
-      description: newStory.scenes[0].description,
-      isLoading: false
-    });
-  }
-);

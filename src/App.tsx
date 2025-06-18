@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useSetAtom } from 'jotai';
 import { SearchContainer } from './features/search/SearchContainer';
 import { SearchResultsContainer } from './features/search/SearchResultsContainer';
 import { MVSWrapper } from './features/mvs/MVSWrapper';
+import { InitializeStoryAtom } from './features/search/atoms';
 /**
  * Main application component
  * Organizes the UI layout and wraps components with the ModelProvider
@@ -10,6 +12,13 @@ import { MVSWrapper } from './features/mvs/MVSWrapper';
  * @returns {JSX.Element} The main application component
  */
 const App: React.FC = () => {
+  const initializeStory = useSetAtom(InitializeStoryAtom);
+
+  useEffect(() => {
+    // Initialize the story with preloaded data when the app mounts
+    initializeStory();
+  }, [initializeStory]);
+
   return (
     <div className="app-container">
       <header className="app-header">

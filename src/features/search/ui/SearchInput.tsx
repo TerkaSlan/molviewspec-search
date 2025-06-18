@@ -23,12 +23,6 @@ export function SearchInput({
 }: SearchInputProps) {
     const isDefaultQuery = value === defaultQuery;
 
-    const handleFocus = () => {
-        if (isDefaultQuery) {
-            onChange('');
-        }
-    };
-
     return (
         <div className={`search-box ${className}`}>
             <div className="search-input-container">
@@ -36,7 +30,6 @@ export function SearchInput({
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    onFocus={handleFocus}
                     onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                             onSearch(searchType);

@@ -10,6 +10,19 @@ import {
     SuperpositionData
 } from './types';
 import { defaultQuery, preloadedQ9FFD0Results } from './examples/preloaded';
+import { createMultiSceneStory } from '../mvs/examples/superposition';
+import { StoryAtom } from '../mvs/atoms';
+
+// Initialize the story with preloaded data
+const initialStory = createMultiSceneStory(defaultQuery, preloadedQ9FFD0Results);
+
+// Set the initial value of StoryAtom
+export const InitializeStoryAtom = atom(
+    (get) => get(StoryAtom),
+    (get, set) => {
+        set(StoryAtom, initialStory);
+    }
+);
 
 // Initial search state with default query and preloaded results
 const initialSearchState: SearchState = {
@@ -47,37 +60,54 @@ export const DebugStateAtom = atom(
   }
 );
 
-// Persist recent searches
-export const RecentSearchesAtom = atomWithStorage<SearchQuery[]>('recent-searches', []);
-
 // Main search state atom
 export const SearchStateAtom = atom<SearchState>(initialSearchState);
 
-// Input validation state atom
+// Validation state atom
 export const ValidationStateAtom = atom<SearchValidationState>({
     isValidating: false,
     error: null
 });
 
-// Combined atoms for components
-export const SearchViewStateAtom = atom((get) => {
-    const state = get(SearchStateAtom);
-    const validation = get(ValidationStateAtom);
-    
-    return {
-        status: state.status,
-        query: state.query,
-        results: state.results,
-        error: state.error,
-        progress: state.progress,
-        isValidating: validation.isValidating,
-        validationError: validation.error,
-        hasResults: state.results.length > 0,
-        isLoading: state.status === 'loading' || validation.isValidating,
-        isEmpty: state.status === 'idle' && state.results.length === 0 && !state.error
-    };
-});
+// Recent searches atom with persistence
+export const RecentSearchesAtom = atomWithStorage<SearchQuery[]>('recent_searches', []);
 
+// Action atoms
+export const SetSearchResultsAtom = atom(
+    null,
+    (get, set, results: AlphaFindStructure[]) => {
+        set(SearchStateAtom, (prev) => ({
+            ...prev,
+            results,
+            lastUpdated: Date.now()
+        }));
+    }
+);
+
+export const SetSearchErrorAtom = atom(
+    null,
+    (get, set, error: SearchError) => {
+        set(SearchStateAtom, (prev) => ({
+            ...prev,
+            status: 'error',
+            error,
+            lastUpdated: Date.now()
+        }));
+    }
+);
+
+export const SetSearchProgressAtom = atom(
+    null,
+    (get, set, progress: SearchProgressInfo) => {
+        set(SearchStateAtom, (prev) => ({
+            ...prev,
+            progress,
+            lastUpdated: Date.now()
+        }));
+    }
+);
+
+// Derived state atoms
 export const SearchInputStateAtom = atom((get) => {
     const state = get(SearchStateAtom);
     const validation = get(ValidationStateAtom);
@@ -97,73 +127,10 @@ export const SearchResultsStateAtom = atom((get) => {
         results: state.results,
         error: state.error,
         progress: state.progress,
-        query: state.query,
-        isEmpty: state.status === 'idle' && state.results.length === 0 && !state.error,
+        isEmpty: !state.results.length,
         hasResults: state.results.length > 0
     };
 });
-
-// Derived atoms for search state
-export const SearchStatusAtom = atom((get) => get(SearchStateAtom).status);
-export const SearchQueryAtom = atom((get) => get(SearchStateAtom).query);
-export const SearchResultsAtom = atom((get) => get(SearchStateAtom).results);
-export const SearchErrorAtom = atom((get) => get(SearchStateAtom).error);
-export const SearchProgressAtom = atom((get) => get(SearchStateAtom).progress);
-
-// Computed atoms for UI state
-export const IsSearchingAtom = atom((get) => {
-    const status = get(SearchStatusAtom);
-    return status === 'loading' || status === 'validating';
-});
-
-export const HasResultsAtom = atom((get) => {
-    const results = get(SearchResultsAtom);
-    return results.length > 0;
-});
-
-export const HasErrorAtom = atom((get) => {
-    const error = get(SearchErrorAtom);
-    return error !== null;
-});
-
-// Action atoms
-export const SetSearchResultsAtom = atom(
-    null,
-    (get, set, results: AlphaFindStructure[]) => {
-        const currentState = get(SearchStateAtom);
-        set(SearchStateAtom, {
-            ...currentState,
-            results,
-            status: 'success',
-            lastUpdated: Date.now()
-        });
-    }
-);
-
-export const SetSearchErrorAtom = atom(
-    null,
-    (get, set, error: SearchError) => {
-        const currentState = get(SearchStateAtom);
-        set(SearchStateAtom, {
-            ...currentState,
-            error,
-            status: 'error',
-            lastUpdated: Date.now()
-        });
-    }
-);
-
-export const SetSearchProgressAtom = atom(
-    null,
-    (get, set, progress: SearchProgressInfo) => {
-        const currentState = get(SearchStateAtom);
-        set(SearchStateAtom, {
-            ...currentState,
-            progress,
-            lastUpdated: Date.now()
-        });
-    }
-);
 
 export const SearchQueryInputAtom = atom(
     (get) => get(SearchStateAtom).query?.inputValue ?? '',
@@ -198,6 +165,48 @@ export const SearchQueryInputAtom = atom(
         });
     }
 );
+
+// Combined atoms for components
+export const SearchViewStateAtom = atom((get) => {
+    const state = get(SearchStateAtom);
+    const validation = get(ValidationStateAtom);
+    
+    return {
+        status: state.status,
+        query: state.query,
+        results: state.results,
+        error: state.error,
+        progress: state.progress,
+        isValidating: validation.isValidating,
+        validationError: validation.error,
+        hasResults: state.results.length > 0,
+        isLoading: state.status === 'loading' || validation.isValidating,
+        isEmpty: state.status === 'idle' && state.results.length === 0 && !state.error
+    };
+});
+
+// Derived atoms for search state
+export const SearchStatusAtom = atom((get) => get(SearchStateAtom).status);
+export const SearchQueryAtom = atom((get) => get(SearchStateAtom).query);
+export const SearchResultsAtom = atom((get) => get(SearchStateAtom).results);
+export const SearchErrorAtom = atom((get) => get(SearchStateAtom).error);
+export const SearchProgressAtom = atom((get) => get(SearchStateAtom).progress);
+
+// Computed atoms for UI state
+export const IsSearchingAtom = atom((get) => {
+    const status = get(SearchStatusAtom);
+    return status === 'loading' || status === 'validating';
+});
+
+export const HasResultsAtom = atom((get) => {
+    const results = get(SearchResultsAtom);
+    return results.length > 0;
+});
+
+export const HasErrorAtom = atom((get) => {
+    const error = get(SearchErrorAtom);
+    return error !== null;
+});
 
 export const ResetSearchAtom = atom(
     null,
