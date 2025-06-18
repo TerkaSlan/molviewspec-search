@@ -49,10 +49,43 @@ export interface AlphaFindSearchOptions {
     onPartialResults?: (data: AlphaFindResponse) => void;
 }
 
+export type SearchStatus = 'idle' | 'validating' | 'loading' | 'success' | 'error';
 export type SearchType = 'alphafind' | 'foldseek';
 
-export interface SearchState extends AlphaFindSearchState {
+export interface SearchQuery {
+    inputValue: string;
+    inputType: 'pdb' | 'uniprot' | null;
     searchType: SearchType;
+    options: {
+        limit: number;
+        superposition: boolean;
+    };
+}
+
+export interface SearchError {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+}
+
+export interface SearchState {
+    status: SearchStatus;
+    query: SearchQuery | null;
+    results: AlphaFindStructure[];
+    error: SearchError | null;
+    progress: SearchProgressInfo | null;
+    lastUpdated: number | null;
+}
+
+export interface SearchValidationState {
+    isValidating: boolean;
+    error: string | null;
+}
+
+export interface SearchOptions extends Partial<AlphaFindSearchOptions> {
+    searchType: SearchType;
+    inputType?: 'pdb' | 'uniprot';
+    fastaSequence?: string;
 }
 
 export interface FoldseekSearchOptions extends AlphaFindSearchOptions {

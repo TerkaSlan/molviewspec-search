@@ -1,19 +1,37 @@
-import { useSetAtom } from 'jotai';
+import { useSetAtom, useAtom } from 'jotai';
 import { useCallback } from 'react';
 import { searchStructures } from '../api';
 import { SearchStateAtom } from '../state';
-import { AlphaFindSearchOptions } from '../types';
+import { RecentSearchesAtom } from '../atoms';
+import { AlphaFindSearchOptions, SearchQuery, SearchError } from '../types';
+
+const MAX_RECENT_SEARCHES = 10;
 
 export function useSearch() {
   const setSearchState = useSetAtom(SearchStateAtom);
+  const [recentSearches, setRecentSearches] = useAtom(RecentSearchesAtom);
 
   const search = useCallback(async (options: Omit<AlphaFindSearchOptions, 'onProgress' | 'onPartialResults'>) => {
+    const searchQuery: SearchQuery = {
+      inputValue: options.query,
+      inputType: null,
+      searchType: 'alphafind',
+      options: { limit: 10, superposition: true }
+    };
+
+    // Update recent searches
+    setRecentSearches((prev: SearchQuery[]) => {
+      const filtered = prev.filter((q: SearchQuery) => q.inputValue !== searchQuery.inputValue);
+      return [searchQuery, ...filtered].slice(0, MAX_RECENT_SEARCHES);
+    });
+
     setSearchState(prev => ({
       ...prev,
-      query: options.query,
-      isSearching: true,
+      status: 'loading',
+      query: searchQuery,
       error: null,
-      progress: null
+      progress: null,
+      lastUpdated: Date.now()
     }));
 
     try {
@@ -22,14 +40,16 @@ export function useSearch() {
         onProgress: (progress) => {
           setSearchState(prev => ({
             ...prev,
-            progress
+            progress,
+            lastUpdated: Date.now()
           }));
         },
         onPartialResults: (data) => {
           const results = data.results || [];
           setSearchState(prev => ({
             ...prev,
-            results
+            results,
+            lastUpdated: Date.now()
           }));
         }
       });
@@ -37,22 +57,28 @@ export function useSearch() {
       const finalResults = response.results || [];
       setSearchState(prev => ({
         ...prev,
-        isSearching: false,
+        status: 'success',
         results: finalResults,
-        error: null
+        error: null,
+        lastUpdated: Date.now()
       }));
 
       return response;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      const searchError: SearchError = {
+        code: error instanceof Error ? error.name : 'UNKNOWN_ERROR',
+        message: error instanceof Error ? error.message : 'An unknown error occurred'
+      };
+      
       setSearchState(prev => ({
         ...prev,
-        isSearching: false,
-        error: errorMessage
+        status: 'error',
+        error: searchError,
+        lastUpdated: Date.now()
       }));
       throw error;
     }
-  }, [setSearchState]);
+  }, [setSearchState, setRecentSearches]);
 
   return { search };
 } 
