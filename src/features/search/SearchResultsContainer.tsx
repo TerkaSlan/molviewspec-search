@@ -1,6 +1,6 @@
 import React from 'react';
-import { useAtomValue } from 'jotai';
-import { SearchResultsStateAtom } from './atoms';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { SearchResultsStateAtom, SelectedSearchResultAtom } from './atoms';
 import { SearchResults } from './ui/SearchResults';
 
 export function SearchResultsContainer() {
@@ -11,6 +11,7 @@ export function SearchResultsContainer() {
         isEmpty,
         hasResults
     } = useAtomValue(SearchResultsStateAtom);
+    const setSelectedResult = useSetAtom(SelectedSearchResultAtom);
 
     return (
         <SearchResults
@@ -19,7 +20,7 @@ export function SearchResultsContainer() {
             progress={progress}
             isEmpty={isEmpty}
             hasResults={hasResults}
-            onResultClick={() => {}} // No-op since we show all scenes at once
+            onResultClick={setSelectedResult}
         />
     );
 } 

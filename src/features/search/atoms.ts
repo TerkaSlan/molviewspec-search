@@ -11,7 +11,7 @@ import {
 } from './types';
 import { defaultQuery, preloadedQ9FFD0Results } from './examples/preloaded';
 import { createMultiSceneStory } from '../mvs/examples/superposition';
-import { StoryAtom } from '../mvs/atoms';
+import { StoryAtom, CurrentViewAtom, ActiveSceneIdAtom } from '../mvs/atoms';
 
 // Initialize the story with preloaded data
 const initialStory = createMultiSceneStory(defaultQuery, preloadedQ9FFD0Results);
@@ -223,5 +223,26 @@ export const ResetSearchAtom = atom(
             isValidating: false,
             error: null
         });
+    }
+);
+
+// Atom to handle selected search result and navigate to its scene
+export const SelectedSearchResultAtom = atom(
+    null as SuperpositionData | null,
+    (get, set, result: SuperpositionData) => {
+        const story = get(StoryAtom);
+        // Find the scene that corresponds to this result
+        const targetScene = story.scenes.find(scene => 
+            scene.description.includes(result.object_id.toUpperCase())
+        );
+        console.log('targetScene', targetScene);
+        console.log('story scenes:', story.scenes.map(s => ({ id: s.id, description: s.description })));
+        
+        if (targetScene) {
+            console.log('Updating scene to:', targetScene.id);
+            // Only need to set ActiveSceneIdAtom now since it's bi-directional
+            set(ActiveSceneIdAtom, targetScene.id);
+        }
+        set(SelectedSearchResultAtom, result);
     }
 ); 
