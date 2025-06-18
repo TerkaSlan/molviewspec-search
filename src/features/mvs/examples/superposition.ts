@@ -51,8 +51,8 @@ targetStructure
 `;
 
   // Log the visualization code to console
-  console.log('Visualization Code:', code);
-  console.log('Configuration:', config);
+  // console.log('Visualization Code:', code);
+  // console.log('Configuration:', config);
 
   return code;
 };

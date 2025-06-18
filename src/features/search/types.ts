@@ -47,4 +47,15 @@ export interface AlphaFindSearchOptions {
     superposition?: boolean;
     onProgress?: (status: SearchProgressInfo) => void;
     onPartialResults?: (data: AlphaFindResponse) => void;
+}
+
+export type SearchType = 'alphafind' | 'foldseek';
+
+export interface SearchState extends AlphaFindSearchState {
+    searchType: SearchType;
+}
+
+export interface FoldseekSearchOptions extends AlphaFindSearchOptions {
+    searchType: 'foldseek';
+    fastaSequence?: string;
 } 

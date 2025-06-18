@@ -1,14 +1,15 @@
 import { atom } from 'jotai';
-import { AlphaFindSearchState } from './types';
+import { SearchState } from './types';
 
 export const API_BASE_URL = 'https://api.stage.alphafind.dyn.cloud.e-infra.cz';
 
-export const SearchStateAtom = atom<AlphaFindSearchState>({
+export const SearchStateAtom = atom<SearchState>({
     query: '',
     results: [],
     isSearching: false,
     error: null,
-    progress: null
+    progress: null,
+    searchType: 'alphafind'
 });
 
 // Derived atoms for search state
