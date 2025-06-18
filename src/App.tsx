@@ -20,20 +20,30 @@ const App: React.FC = () => {
       </header>
       
       <div className="main-content">
-        <div className="left-panel panel">
-          <div className="panel-header">Search</div>
-          <div className="panel-content">
-            <SearchContainer />
-            <SearchResultsContainer />
+        <div className="left-side">
+          <div className="panel search-panel">
+            <div className="panel-header">Search</div>
+            <div className="panel-content">
+              <SearchContainer />
+            </div>
+          </div>
+          
+          <div className="panel results-panel">
+            <div className="panel-header">Results</div>
+            <div className="panel-content">
+              <SearchResultsContainer />
+            </div>
           </div>
         </div>
         
         <div className="center-panel">
           <MVSExample />
         </div>
-        
-        <div className="right-panel panel">
-          <div className="panel-header">Structure Info</div>
+      </div>
+
+      <div className="bottom-panel panel">
+        <div className="panel-header">Structure Info</div>
+        <div className="panel-content">
         </div>
       </div>
     </div>

@@ -9,6 +9,25 @@ import {
     AlphaFindStructure,
     SuperpositionData
 } from './types';
+import { defaultQuery, preloadedQ9FFD0Results } from './examples/preloaded';
+
+// Initial search state with default query and preloaded results
+const initialSearchState: SearchState = {
+    status: 'success',  // Changed from 'idle' to 'success' since we have results
+    query: {
+        inputValue: defaultQuery,
+        inputType: 'uniprot',  // We know it's a UniProt ID
+        searchType: 'alphafind',
+        options: {
+            limit: 10,
+            superposition: true
+        }
+    },
+    results: preloadedQ9FFD0Results,
+    error: null,
+    progress: null,
+    lastUpdated: Date.now()
+};
 
 // Debug atom for development
 const isDev = process.env.NODE_ENV === 'development';
@@ -31,15 +50,8 @@ export const DebugStateAtom = atom(
 // Persist recent searches
 export const RecentSearchesAtom = atomWithStorage<SearchQuery[]>('recent-searches', []);
 
-// Base search state atom
-export const SearchStateAtom = atom<SearchState>({
-    status: 'idle',
-    query: null,
-    results: [],
-    error: null,
-    progress: null,
-    lastUpdated: null
-});
+// Main search state atom
+export const SearchStateAtom = atom<SearchState>(initialSearchState);
 
 // Input validation state atom
 export const ValidationStateAtom = atom<SearchValidationState>({

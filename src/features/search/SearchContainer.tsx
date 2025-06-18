@@ -7,6 +7,7 @@ import { performSearch, updateSearchType } from './actions';
 import { SearchType } from './types';
 import { useFoldseek } from './hooks/useFoldseek';
 import { SearchInput } from './ui/SearchInput';
+import { defaultQuery } from './examples/preloaded';
 
 export function SearchContainer() {
     const [inputValue, setInputValue] = useAtom(SearchQueryInputAtom);
@@ -16,6 +17,11 @@ export function SearchContainer() {
     const { getFastaSequence } = useFoldseek();
 
     const handleSearch = async (searchType: SearchType) => {
+        // Don't trigger a new search if we're using the default query
+        if (inputValue === defaultQuery) {
+            return;
+        }
+
         try {
             updateSearchType(searchType);
             

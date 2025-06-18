@@ -50,10 +50,6 @@ targetStructure
   .color({ color: '${config.targetProteinColor}' });
 `;
 
-  // Log the visualization code to console
-  // console.log('Visualization Code:', code);
-  // console.log('Configuration:', config);
-
   return code;
 };
 
@@ -80,20 +76,4 @@ export const createSuperpositionTemplateStory = (queryProteinId: string, superpo
     }
   ],
   assets: [],
-});
-
-// Keep the SimpleStory as a demo/example
-export const SimpleStory: Story = createSuperpositionTemplateStory('Q9FFD0', {
-  object_id: 'V4KUL2',
-  aligned_percentage: 0.96600566572238,
-  rmsd: 0,
-  rotation_matrix: [
-    [0.426647081, -0.8306958628, -0.3576543747],
-    [0.6321548112, -0.0089086134, 0.7747908952],
-    [-0.6468017958, -0.5566552075, 0.5213275524]
-  ],
-  translation_vector: [-0.024638318, -0.0226368405, -1.659659342],
-  sequence_aligned_percentage: 0.634665722379603,
-  tm_score: 0.9661,
-  tm_score_target: 0.958
 });

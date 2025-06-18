@@ -1,5 +1,6 @@
 import React from 'react';
 import { SearchType } from '../types';
+import { defaultQuery } from '../examples/preloaded';
 
 interface SearchInputProps {
     value: string;
@@ -20,6 +21,14 @@ export function SearchInput({
     searchType,
     className = ''
 }: SearchInputProps) {
+    const isDefaultQuery = value === defaultQuery;
+
+    const handleFocus = () => {
+        if (isDefaultQuery) {
+            onChange('');
+        }
+    };
+
     return (
         <div className={`search-box ${className}`}>
             <div className="search-input-container">
@@ -27,13 +36,14 @@ export function SearchInput({
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
+                    onFocus={handleFocus}
                     onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                             onSearch(searchType);
                         }
                     }}
                     placeholder="Enter PDB ID or UniProt ID..."
-                    className="search-input"
+                    className={`search-input ${isDefaultQuery ? 'default-query' : ''}`}
                     disabled={isDisabled}
                 />
             </div>
