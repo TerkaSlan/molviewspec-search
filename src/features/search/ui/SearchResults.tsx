@@ -1,5 +1,7 @@
 import React from 'react';
+import { useAtomValue } from 'jotai';
 import { SearchProgressInfo, SuperpositionData } from '../types';
+import { CurrentSnapshotAtom } from '../../mvs/atoms';
 
 interface SearchProgressProps {
     progress: SearchProgressInfo | null;
@@ -51,6 +53,8 @@ interface ResultsTableProps {
 }
 
 function ResultsTable({ results, onResultClick }: ResultsTableProps) {
+    const currentSnapshot = useAtomValue(CurrentSnapshotAtom);
+    
     return (
         <div className="results-container">
             <table className="results-table">
@@ -63,18 +67,23 @@ function ResultsTable({ results, onResultClick }: ResultsTableProps) {
                     </tr>
                 </thead>
                 <tbody>
-                    {results.map((result) => (
-                        <tr
-                            key={result.object_id}
-                            className="result-row"
-                            onClick={() => onResultClick(result)}
-                        >
-                            <td className="protein-id">{result.object_id}</td>
-                            <td className="tm-score">{result.tm_score.toFixed(3)}</td>
-                            <td className="rmsd">{result.rmsd.toFixed(3)}</td>
-                            <td className="aligned">{(result.aligned_percentage * 100).toFixed(1)}%</td>
-                        </tr>
-                    ))}
+                    {results.map((result) => {
+                        const sceneKey = `scene_${result.object_id}`;
+                        const isActive = currentSnapshot === sceneKey;
+                        
+                        return (
+                            <tr
+                                key={result.object_id}
+                                className={`result-row ${isActive ? 'active' : ''}`}
+                                onClick={() => onResultClick(result)}
+                            >
+                                <td className="protein-id">{result.object_id}</td>
+                                <td className="tm-score">{result.tm_score.toFixed(3)}</td>
+                                <td className="rmsd">{result.rmsd.toFixed(3)}</td>
+                                <td className="aligned">{(result.aligned_percentage * 100).toFixed(1)}%</td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
         </div>

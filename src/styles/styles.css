@@ -572,4 +572,14 @@ button:disabled {
 .search-error {
   background-color: #ffebee;
   color: #d32f2f;
+}
+
+/* Search Results Table Active Row */
+.result-row.active {
+    background-color: rgba(59, 130, 246, 0.1);
+    font-weight: 500;
+}
+
+.result-row.active:hover {
+    background-color: rgba(59, 130, 246, 0.2);
 } 

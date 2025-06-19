@@ -20,11 +20,9 @@ export const CurrentViewAtom = atom<CurrentView>({
 export const ActiveSceneIdAtom = atom(
   (get) => {
     const view = get(CurrentViewAtom);
-    console.log('ActiveSceneIdAtom read:', view);
     return view.type === 'scene' ? view.id : null;
   },
   (_get, set, newId: string | null) => {
-    console.log('ActiveSceneIdAtom write:', newId);
     if (newId) {
       set(CurrentViewAtom, { 
         type: 'scene', 
@@ -35,20 +33,20 @@ export const ActiveSceneIdAtom = atom(
   }
 );
 
-// Modified to properly handle null activeId and add debugging
+// Return first scene only if we have scenes and no active scene is selected
 export const ActiveSceneAtom = atom((get) => {
   const story = get(StoryAtom);
   const activeId = get(ActiveSceneIdAtom);
-  console.log('ActiveSceneAtom computation:', { activeId, sceneCount: story.scenes.length });
+  
+  if (!story.scenes.length) {
+    return null;
+  }
   
   if (!activeId) {
-    console.log('No active ID, returning first scene');
     return story.scenes[0];
   }
   
-  const scene = story.scenes.find((scene) => scene.id === activeId);
-  console.log('Found scene:', scene?.id);
-  return scene || story.scenes[0];
+  return story.scenes.find((scene) => scene.id === activeId) || story.scenes[0];
 });
 
 export const DescriptionAtom = atom<{
@@ -73,3 +71,6 @@ export const SearchAtom = atom<SearchState>({
   isLoading: false,
   error: null
 });
+
+// New atom to track current snapshot
+export const CurrentSnapshotAtom = atom<string | null>(null);

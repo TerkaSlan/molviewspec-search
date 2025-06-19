@@ -59,7 +59,7 @@ export const createMultiSceneStory = (queryProteinId: string, results: Superposi
   scenes: results.map((result, index) => ({
     id: UUID.createv4(),
     header: `Alignment ${index + 1}`,
-    key: `scene_${(index + 1).toString().padStart(2, '0')}`,
+    key: `scene_${result.object_id}`,
     description:
       `Superposition of **${queryProteinId.toUpperCase()}** and **${result.object_id.toUpperCase()}**.\n\nAlignment metrics:\n- RMSD: ${result.rmsd.toFixed(2)}\n- TM-score: ${result.tm_score.toFixed(4)}\n- Aligned: ${(result.aligned_percentage * 100).toFixed(1)}%`,
     javascript: createInitialJavaScriptCode({
