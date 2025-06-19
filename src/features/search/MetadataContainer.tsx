@@ -1,32 +1,40 @@
-import React from 'react';
-import { useAtomValue } from 'jotai';
-import { CurrentSnapshotAtom } from '../mvs/atoms';
-import { SearchStateAtom } from './atoms';
+import React, { useEffect } from 'react';
+import { useReactiveModel } from '../../lib/hooks/use-reactive-model';
+import { useBehavior } from '../../lib/hooks/use-behavior';
+import { SearchModel } from './models/SearchModel';
 import { Metadata } from './ui/Metadata';
 
-export function MetadataContainer() {
-    const currentSnapshot = useAtomValue(CurrentSnapshotAtom);
-    const searchState = useAtomValue(SearchStateAtom);
+interface MetadataContainerProps {
+    model: SearchModel;
+}
+
+export function MetadataContainer({ model }: MetadataContainerProps) {
+    useReactiveModel(model);
     
-    // If there's no search state or no query, don't render anything
-    if (!searchState.query || !searchState.results.length) {
+    const selectedResult = useBehavior(model.selectedResult$);
+    const results = useBehavior(model.results$);
+    const query = useBehavior(model.query$);
+    
+    // Debug state changes
+    useEffect(() => {
+        console.log('[MetadataContainer] Selected result:', selectedResult?.object_id);
+    }, [selectedResult]);
+
+    useEffect(() => {
+        console.log('[MetadataContainer] Query/Results:', { 
+            query, 
+            resultCount: results?.length 
+        });
+    }, [query, results]);
+
+    // If there are no results or query, don't render anything
+    if (!results?.length || !query) {
         return null;
     }
 
-    // Get the query protein ID
-    const queryProteinId = searchState.query.inputValue;
-
-    // Find the currently selected target protein based on the snapshot key
-    const selectedResult = currentSnapshot 
-        ? searchState.results.find(result => 
-            currentSnapshot.includes(result.object_id.toLowerCase()) ||
-            currentSnapshot.includes(result.object_id.toUpperCase())
-        ) ?? null
-        : null;
-
     return (
         <Metadata 
-            queryProteinId={queryProteinId}
+            queryProteinId={query}
             selectedResult={selectedResult}
         />
     );

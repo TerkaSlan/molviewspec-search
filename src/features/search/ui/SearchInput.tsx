@@ -8,7 +8,7 @@ interface SearchInputProps {
     onSearch: (searchType: SearchType) => void;
     isAlphaFindDisabled: boolean;
     isFoldseekDisabled: boolean;
-    error?: string;
+    error: string | null;
     searchType: SearchType;
     className?: string;
 }

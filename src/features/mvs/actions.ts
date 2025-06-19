@@ -6,7 +6,7 @@ const createStateProvider = (code: string) => {
     return new Function('builder', code);
 };
 
-async function getMVSSnapshot(story: Story, scene: SceneData) {
+export async function getMVSSnapshot(story: Story, scene: SceneData) {
     try {
         if (!scene) {
             console.error('Scene is undefined');

@@ -10,11 +10,17 @@ import { Scheduler } from 'molstar/lib/mol-task';
 import { SingleTaskQueue } from '../../utils';
 import { StoryAtom, ActiveSceneAtom, ActiveSceneIdAtom, CurrentViewAtom, CurrentSnapshotAtom } from './atoms';
 import { Story, SceneData } from '../types';
-import { getMVSData } from './actions';
+import { getMVSData, getMVSSnapshot } from './actions';
 import { MolstarViewer } from './ui/MolstarViewer';
 import { PluginCommands } from 'molstar/lib/mol-plugin/commands';
 import { Subscription, Subject } from 'rxjs';
 import { filter, debounceTime } from 'rxjs/operators';
+import { MVSData, Snapshot } from 'molstar/lib/extensions/mvs/mvs-data';
+
+
+interface MolstarContainerProps {
+    story: Story | null;
+}
 
 // Separate concerns: Plugin creation
 function createViewer() {
@@ -73,6 +79,7 @@ class MolstarViewModel {
     private queue = new SingleTaskQueue();
     readonly plugin: PluginUIContext;
     private _store: ReturnType<typeof useStore> | undefined = undefined;
+    private _isLoading = false;
 
     constructor() {
         this.plugin = createViewer();
@@ -92,29 +99,51 @@ class MolstarViewModel {
         // Cleanup handled by useMolstarState hook
     }
 
-    async loadStory(story: Story, scene: SceneData) {
-        if (!scene) return;
+    get isLoading() {
+        return this._isLoading;
+    }
+
+    async loadStory(story: Story) {
+        if (!story) return;
 
         this.queue.run(async () => {
             try {
-                this._store?.set(IsLoadingAtom, true);
-                const data = await getMVSData(story, story.scenes);
+                this._isLoading = true;
                 await this.plugin.initialized;
                 await Scheduler.immediatePromise();
-                await loadMVSData(this.plugin, data, data instanceof Uint8Array ? 'mvsx' : 'mvsj');
+
+                const snapshots: Snapshot[] = [];
+
+                for (const scene of story.scenes) {
+                    const snapshot = await getMVSSnapshot(story, scene);
+                    snapshots.push(snapshot);
+                  }
+                  const index: MVSData = {
+                    kind: 'multiple',
+                    metadata: {
+                      title: story.metadata.title,
+                      timestamp: new Date().toISOString(),
+                      version: `${MVSData.SupportedVersion}`,
+                    },
+                    snapshots,
+                  };
+
+                await loadMVSData(this.plugin, index, 'mvsj');
                 
                 // After loading, select the initial scene
-                await this.selectScene(scene);
+                if (story.scenes.length > 0) {
+                    await this.selectScene(story.scenes[0].key);
+                }
             } catch (error) {
                 console.error('Error loading MVS data into Molstar:', error);
             } finally {
-                this._store?.set(IsLoadingAtom, false);
+                this._isLoading = false;
             }
         });
     }
 
-    async selectScene(scene: SceneData) {
-        if (!scene) return;
+    async selectScene(sceneKey: string) {
+        if (!sceneKey) return;
         
         try {
             const snapshotManager = this.plugin.managers.snapshot;
@@ -128,7 +157,7 @@ class MolstarViewModel {
             const delayMs = 100;
             
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const entry = snapshotManager.state.entries.find(e => e.key === scene.key);
+                const entry = snapshotManager.state.entries.find(e => e.key === sceneKey);
                 if (entry) {
                     await PluginCommands.State.Snapshots.Apply(this.plugin, { id: entry.snapshot.id });
                     return;
@@ -138,7 +167,7 @@ class MolstarViewModel {
                 }
             }
             
-            console.warn('No snapshot found for scene key:', scene.key);
+            console.warn('No snapshot found for scene key:', sceneKey);
         } catch (error) {
             console.error('Error selecting scene:', error);
         }
@@ -148,7 +177,7 @@ class MolstarViewModel {
 let _modelInstance: MolstarViewModel | null = null;
 const IsLoadingAtom = atom(false);
 
-export function MolstarContainer() {
+export function MolstarContainer({ story }: MolstarContainerProps) {
     const modelRef = useRef<MolstarViewModel>();
     const isLoading = useAtomValue(IsLoadingAtom);
     const activeSceneId = useAtomValue(ActiveSceneIdAtom);
@@ -164,7 +193,6 @@ export function MolstarContainer() {
     }
 
     const model = modelRef.current;
-    const story = useAtomValue(StoryAtom);
     const scene = useAtomValue(ActiveSceneAtom);
 
     // Set up store and state management
@@ -175,23 +203,24 @@ export function MolstarContainer() {
     // Set up Molstar state management
     useMolstarState(model.plugin, store);
 
-    // Initial load effect
+    // Load story when it changes
     useEffect(() => {
-        if (!story.scenes.length) return;
-        model.loadStory(story, story.scenes[0]);
+        if (story) {
+            model.loadStory(story);
+        }
     }, [model, story]);
 
     // Scene selection effect - only trigger when we have an explicit scene selection
     useEffect(() => {
         if (!scene || !activeSceneId) return;
-        model.selectScene(scene);
-    }, [model, scene?.id, activeSceneId]);
+        model.selectScene(scene.key);
+    }, [model, scene?.key, activeSceneId]);
 
     return (
         <div className="relative aspect-square w-full">
             <MolstarViewer 
                 plugin={model.plugin}
-                isLoading={isLoading}
+                isLoading={model.isLoading}
             />
         </div>
     );
