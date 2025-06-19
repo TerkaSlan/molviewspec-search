@@ -4,8 +4,6 @@ import { SuperpositionData } from '../../search/types';
 
 interface SuperpositionMolecularVisualizationConfig {
   queryProteinColor: string;
-  ligandColor: string;
-  ligandLabel?: string;
   queryProteinId: string;
   targetProteinId: string;
   targetProteinColor: string;
@@ -66,8 +64,6 @@ export const createMultiSceneStory = (queryProteinId: string, results: Superposi
     javascript: createInitialJavaScriptCode({
       queryProteinColor: 'green',
       targetProteinColor: 'blue',
-      ligandColor: '#cc3399',
-      ligandLabel: 'Ligand',
       queryProteinId: queryProteinId,
       targetProteinId: result.object_id,
       rotation_matrix: result.rotation_matrix,

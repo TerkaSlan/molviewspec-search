@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Observable } from 'rxjs';
 import { globalStateService } from '../state/GlobalStateService';
-import { SuperpositionData, SearchProgressInfo } from '../../features/search/types';
-import { Story, Scene, CurrentView } from '../../features/types';
 
 export function useGlobalState<T>(selector: (service: typeof globalStateService) => Observable<T>): T | undefined {
   const [value, setValue] = useState<T>();
