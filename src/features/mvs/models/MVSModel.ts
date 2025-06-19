@@ -22,30 +22,25 @@ const initialState: MVSState = {
 export class MVSModel extends ReactiveModel {
     private state$ = new BehaviorSubject<MVSState>(initialState);
 
-    // Selectors
-    getStory$ = (): Observable<Story | null> =>
-        this.state$.pipe(
-            map(state => state.story),
+    // Generic state selector
+    getStateProperty$<K extends keyof MVSState>(property: K): Observable<MVSState[K]> {
+        return this.state$.pipe(
+            map(state => state[property]),
             distinctUntilChanged()
         );
+    }
 
-    getCurrentSceneKey$ = (): Observable<string | null> =>
-        this.state$.pipe(
-            map(state => state.currentSceneKey),
-            distinctUntilChanged()
-        );
-
-    getShouldClearPlugin$ = (): Observable<boolean> =>
-        this.state$.pipe(
-            map(state => state.shouldClearPlugin),
-            distinctUntilChanged()
-        );
-
-    getSelectedResult$ = (): Observable<SuperpositionData | null> =>
-        this.state$.pipe(
-            map(state => state.selectedResult),
-            distinctUntilChanged()
-        );
+    // Organized selectors
+    selectors = {
+        story: {
+            current: () => this.getStateProperty$('story'),
+            currentScene: () => this.getStateProperty$('currentSceneKey')
+        },
+        viewer: {
+            shouldClearPlugin: () => this.getStateProperty$('shouldClearPlugin'),
+            selectedResult: () => this.getStateProperty$('selectedResult')
+        }
+    };
 
     // Actions
     setCurrentSceneKey(sceneKey: string | null) {
@@ -122,5 +117,12 @@ export class MVSModel extends ReactiveModel {
     // Debug helper
     getDebugState() {
         return this.state$.value;
+    }
+
+    private setState(newState: Partial<MVSState>) {
+        this.state$.next({
+            ...this.state$.value,
+            ...newState
+        });
     }
 } 

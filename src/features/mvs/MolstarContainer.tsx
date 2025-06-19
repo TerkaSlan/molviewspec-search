@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
 import { PluginSpec } from 'molstar/lib/mol-plugin/spec';
@@ -8,10 +8,9 @@ import { loadMVSData } from 'molstar/lib/extensions/mvs/components/formats';
 import { Scheduler } from 'molstar/lib/mol-task';
 import { SingleTaskQueue } from '../../utils';
 import { Story } from '../types';
-import { getMVSData, getMVSSnapshot } from './actions';
+import {  getMVSSnapshot } from './actions';
 import { MolstarViewer } from './ui/MolstarViewer';
 import { PluginCommands } from 'molstar/lib/mol-plugin/commands';
-import { Subscription } from 'rxjs';
 import { filter, debounceTime } from 'rxjs/operators';
 import { MVSData, Snapshot } from 'molstar/lib/extensions/mvs/mvs-data';
 import { useObservable } from '../../lib/hooks/use-observable';
@@ -79,9 +78,9 @@ function useMolstarState(plugin: PluginUIContext, story: Story | null, model: MV
 
     // Subscribe to scene changes from our model
     useEffect(() => {
-        const subscription = model.getCurrentSceneKey$()
+        const subscription = model.selectors.story.currentScene()
             .pipe(filter((key): key is string => key !== null))
-            .subscribe(async (sceneKey) => {
+            .subscribe(async (sceneKey: string) => {
                 try {
                     const snapshotManager = plugin.managers.snapshot;
                     if (!snapshotManager) {
@@ -187,8 +186,8 @@ let _modelInstance: MolstarViewModel | null = null;
 
 export function MolstarContainer({ story, model }: MolstarContainerProps) {
     const modelRef = useRef<MolstarViewModel>();
-    const currentSceneKey = useObservable(model.getCurrentSceneKey$(), null);
-    const shouldClearPlugin = useObservable(model.getShouldClearPlugin$(), false);
+    //const currentSceneKey = useObservable(model.getCurrentSceneKey$(), null);
+    const shouldClearPlugin = useObservable(model.selectors.viewer.shouldClearPlugin(), false);
 
     if (!_modelInstance) {
         _modelInstance = new MolstarViewModel();

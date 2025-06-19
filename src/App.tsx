@@ -16,6 +16,19 @@ import { preloadedResults, defaultQuery } from './features/search/examples/prelo
  * @component
  * @returns {JSX.Element} The main application component
  */
+function useAppState(searchModel: SearchModel, mvsModel: MVSModel) {
+    return {
+        search: {
+            results: useObservable(searchModel.selectors.results.items(), []),
+            query: useObservable(searchModel.selectors.input.query(), null),
+            selectedResult: useObservable(searchModel.selectors.results.selectedResult(), null)
+        },
+        mvs: {
+            story: useObservable(mvsModel.selectors.story.current(), null)
+        }
+    };
+}
+
 export function App() {
     // Create instances of our models
     const searchModel = useMemo(() => new SearchModel(), []);
@@ -25,6 +38,9 @@ export function App() {
     useReactiveModel(searchModel);
     useReactiveModel(mvsModel);
 
+    // Subscribe to state using custom hook
+    const state = useAppState(searchModel, mvsModel);
+
     // Initialize with preloaded data
     useEffect(() => {
         console.log('[App] Initializing with preloaded data');
@@ -32,41 +48,33 @@ export function App() {
         searchModel.initializeWithResults(defaultQuery, preloadedResults.results);
     }, [searchModel]);
 
-    // Subscribe to search state to update MVS
-    const searchResults = useObservable(searchModel.getResults$(), []);
-    const searchQuery = useObservable(searchModel.getQuery$(), null);
-
     // Connect search results to MVS
     useEffect(() => {
         console.log('[App] Updating MVS from search:', {
-            query: searchQuery,
-            resultCount: searchResults.length
+            query: state.search.query,
+            resultCount: state.search.results.length
         });
-        mvsModel.updateFromSearchResults(searchQuery, searchResults);
-    }, [mvsModel, searchQuery, searchResults]);
-
-    // Subscribe to selected result from search to update MVS
-    const selectedResult = useObservable(searchModel.getSelectedResult$(), null);
-    const story = useObservable(mvsModel.getStory$(), null);
+        mvsModel.updateFromSearchResults(state.search.query, state.search.results);
+    }, [mvsModel, state.search.query, state.search.results]);
     
     // Debug MVS state
     useEffect(() => {
         console.group('[App] MVS State Update');
         console.log('Story:', {
-            hasStory: !!story,
-            sceneCount: story?.scenes?.length || 0,
-            metadata: story?.metadata
+            hasStory: !!state.mvs.story,
+            sceneCount: state.mvs.story?.scenes?.length || 0,
+            metadata: state.mvs.story?.metadata
         });
-        console.log('Selected Result:', selectedResult);
+        console.log('Selected Result:', state.search.selectedResult);
         console.groupEnd();
-    }, [story, selectedResult]);
+    }, [state.mvs.story, state.search.selectedResult]);
 
     useEffect(() => {
-        if (selectedResult && story) {
-            const scene = story.scenes.find(scene => {
+        if (state.search.selectedResult && state.mvs.story) {
+            const scene = state.mvs.story.scenes.find(scene => {
                 if ('result' in scene) {
                     const sceneWithResult = scene as { result: { object_id: string }, key: string };
-                    return sceneWithResult.result.object_id === selectedResult.object_id;
+                    return sceneWithResult.result.object_id === state.search.selectedResult?.object_id;
                 }
                 return false;
             });
@@ -76,7 +84,7 @@ export function App() {
                 mvsModel.setCurrentSceneKey(scene.key);
             }
         }
-    }, [mvsModel, selectedResult, story]);
+    }, [mvsModel, state.search.selectedResult, state.mvs.story]);
 
     return (
         <div className="app-container">
@@ -95,7 +103,7 @@ export function App() {
                     
                     <div className="panel results-panel">
                         <div className="panel-header">
-                            Results{searchQuery ? ` for ${searchQuery}` : ''}
+                            Results{state.search.query ? ` for ${state.search.query}` : ''}
                         </div>
                         <div className="panel-content">
                             <SearchResults model={searchModel} />
@@ -111,7 +119,7 @@ export function App() {
             <div className="bottom-panel panel">
                 <div className="panel-header">Structure Info</div>
                 <div className="panel-content">
-                    <MetadataContainer model={searchModel} />
+                    <MetadataContainer model={searchModel} mvsModel={mvsModel} />
                 </div>
             </div>
         </div>

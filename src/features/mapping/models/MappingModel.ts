@@ -16,17 +16,20 @@ export class MappingModel extends ReactiveModel {
         error: null
     });
 
-    getData$() {
-        return this.state$.pipe(map(state => state.data));
+    getStateProperty$<K extends keyof MappingState>(property: K) {
+        return this.state$.pipe(map(state => state[property]));
     }
 
-    getIsLoading$() {
-        return this.state$.pipe(map(state => state.isLoading));
-    }
-
-    getError$() {
-        return this.state$.pipe(map(state => state.error));
-    }
+    // Organized selectors
+    selectors = {
+        mapping: {
+            data: () => this.getStateProperty$('data')
+        },
+        status: {
+            isLoading: () => this.getStateProperty$('isLoading'),
+            error: () => this.getStateProperty$('error')
+        }
+    };
 
     private setState(newState: Partial<MappingState>) {
         this.state$.next({

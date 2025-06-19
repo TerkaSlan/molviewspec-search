@@ -13,10 +13,15 @@ export function SearchContainer({ model }: SearchContainerProps) {
     // Connect the model to React's lifecycle
     useReactiveModel(model);
 
-    // Subscribe to state
-    const query = useObservable(model.getQuery$(), null);
-    const isSearching = useObservable(model.getIsSearching$(), false);
-    const error = useObservable(model.getValidationError$(), null);
+    // Subscribe to grouped state
+    const { query, searchType } = useObservable(model.selectors.search.input(), {
+        query: null,
+        searchType: 'alphafind' as SearchType
+    });
+    const { isSearching, validationError } = useObservable(model.selectors.search.status(), {
+        isSearching: false,
+        validationError: null
+    });
 
     const handleSearch = useCallback(async (inputValue: string, searchType: SearchType) => {
         try {
@@ -36,8 +41,9 @@ export function SearchContainer({ model }: SearchContainerProps) {
     return (
         <SearchInput
             value={query || ''}
+            searchType={searchType}
             isLoading={isSearching}
-            error={error}
+            error={validationError}
             onSearch={handleSearch}
             onClear={handleClear}
             model={model}

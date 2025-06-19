@@ -2,10 +2,10 @@ import React, { useCallback } from 'react';
 import { SearchType } from '../types';
 import { defaultQuery } from '../examples/preloaded';
 import { SearchModel } from '../models/SearchModel';
-import { useObservable } from '../../../lib/hooks/use-observable';
 
 interface SearchInputProps {
     value: string;
+    searchType: SearchType;
     isLoading: boolean;
     error: string | null;
     onSearch: (value: string, searchType: SearchType) => void;
@@ -15,19 +15,17 @@ interface SearchInputProps {
 
 export function SearchInput({
     value,
+    searchType,
     isLoading,
     error,
     onSearch,
     onClear,
     model
 }: SearchInputProps) {
-    const query = useObservable(model.getQuery$(), defaultQuery);
-    const searchType = useObservable(model.getSearchType$(), 'alphafind' as SearchType) || 'alphafind';
-
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
-        onSearch(query || defaultQuery, searchType);
-    }, [query, searchType, onSearch]);
+        onSearch(value || defaultQuery, searchType);
+    }, [value, searchType, onSearch]);
 
     const handleClear = useCallback(() => {
         model.clearSearch();
@@ -40,23 +38,29 @@ export function SearchInput({
         if (error) {
             model.setValidationError(null);
         }
-        model.setSearchQuery(value || defaultQuery, searchType);
+        model.setSearchInput({ 
+            query: value || defaultQuery,
+            searchType 
+        });
     }, [model, searchType, error]);
 
     const handleSearchTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-        model.setSearchQuery(query || defaultQuery, e.target.value as SearchType);
-    }, [model, query]);
+        model.setSearchInput({
+            query: value || defaultQuery,
+            searchType: e.target.value as SearchType
+        });
+    }, [model, value]);
 
     return (
         <form onSubmit={handleSubmit} className="search-form">
             <div className="search-input-container">
                 <input
                     type="text"
-                    value={query || defaultQuery}
+                    value={value}
                     onChange={handleInputChange}
                     placeholder="Enter PDB ID or UniProt ID"
                     disabled={isLoading}
-                    className={`search-input ${error ? 'error' : ''}`}
+                    className={`search-input ${error ? 'error' : ''} ${value === defaultQuery ? 'default-query' : ''}`}
                 />
                 <select
                     value={searchType}
@@ -72,7 +76,7 @@ export function SearchInput({
             <div className="search-actions">
                 <button
                     type="submit"
-                    disabled={isLoading || !query || error !== null}
+                    disabled={isLoading || !value || error !== null}
                     className="search-button"
                 >
                     {isLoading ? 'Searching...' : 'Search'}
@@ -80,7 +84,7 @@ export function SearchInput({
                 <button
                     type="button"
                     onClick={handleClear}
-                    disabled={isLoading || !query}
+                    disabled={isLoading || !value}
                     className="clear-button"
                 >
                     Clear

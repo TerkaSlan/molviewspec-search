@@ -587,13 +587,14 @@ button:disabled {
 }
 
 /* Search Results Table Active Row */
-.result-row.active {
-    background-color: rgba(59, 130, 246, 0.1);
+.results-table .result-row.active {
+    background-color: rgba(59, 130, 246, 0.2);
     font-weight: 500;
+    border-left: 4px solid rgb(59, 130, 246);
 }
 
-.result-row.active:hover {
-    background-color: rgba(59, 130, 246, 0.2);
+.results-table .result-row.active:hover {
+    background-color: rgba(59, 130, 246, 0.3);
 }
 
 /* Metadata Component Styles */
@@ -638,4 +639,4 @@ button:disabled {
 
 .metadata-section .value {
     font-family: monospace;
-} 
+}

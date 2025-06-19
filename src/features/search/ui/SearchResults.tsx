@@ -40,7 +40,18 @@ interface ResultsTableProps {
 }
 
 function ResultsTable({ results, onResultClick, model }: ResultsTableProps) {
-    const currentSceneKey = useObservable(model.getCurrentSceneKey$(), null);
+    
+    const currentSceneKey = useObservable(model.selectors.story.currentScene(), null);
+    const selectedResult = useObservable(model.selectors.viewer.selectedResult(), null);
+    
+    // Debug state in ResultsTable
+    React.useEffect(() => {
+        console.log('[ResultsTable] State:', {
+            currentSceneKey,
+            selectedResultId: selectedResult?.object_id,
+            resultIds: results.map(r => r.object_id)
+        });
+    }, [currentSceneKey, selectedResult, results]);
     
     return (
         <div className="results-container">
@@ -56,7 +67,18 @@ function ResultsTable({ results, onResultClick, model }: ResultsTableProps) {
                 <tbody>
                     {results.map((result) => {
                         const sceneKey = `scene_${result.object_id}`;
-                        const isActive = currentSceneKey === sceneKey;
+                        const isActive = currentSceneKey === sceneKey || selectedResult?.object_id === result.object_id;
+                        
+                        // Debug row state
+                        console.log('[ResultsTable] Row:', {
+                            id: result.object_id,
+                            sceneKey,
+                            isActive,
+                            matches: {
+                                scene: currentSceneKey === sceneKey,
+                                selected: selectedResult?.object_id === result.object_id
+                            }
+                        });
                         
                         return (
                             <tr

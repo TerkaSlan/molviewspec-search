@@ -13,8 +13,8 @@ export function MVSWrapper({ model }: MVSWrapperProps) {
     useReactiveModel(model);
 
     // Subscribe to state
-    const story = useObservable(model.getStory$(), null);
-    const shouldClearPlugin = useObservable(model.getShouldClearPlugin$(), false);
+    const story = useObservable(model.selectors.story.current(), null);
+    const shouldClearPlugin = useObservable(model.selectors.viewer.shouldClearPlugin(), false);
 
     // Debug state changes
     useEffect(() => {
