@@ -54,8 +54,9 @@ class SearchService {
             return inputType;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Error validating input';
-            // Clear all search-related state when validation fails
-            globalStateService.clearSearch();
+            // First reset isSearching to prevent stuck state
+            globalStateService.setSearchComplete();
+            // Then set the validation error - this will persist until the query changes
             globalStateService.setValidationError(errorMessage);
             throw error;
         }
@@ -75,18 +76,21 @@ class SearchService {
 
 
     public async search(query: string, searchType: SearchType): Promise<void> {
-        // If there's already a search in progress, wait for it to complete
+        // If there's already a search in progress, don't start another one
         if (this.currentSearch) {
-            await this.currentSearch;
+            return;
         }
 
-        // Start new search
-        this.currentSearch = this.performSearch(query, searchType);
-
         try {
+            this.currentSearch = this.performSearch(query, searchType);
             await this.currentSearch;
+        } catch (error) {
+            console.error('Search failed:', error);
+            // Don't set validation error here - let validateInput handle it
         } finally {
             this.currentSearch = null;
+            // Ensure isSearching is reset
+            globalStateService.setSearchComplete();
         }
     }
 
@@ -126,6 +130,7 @@ class SearchService {
             // Clear all search-related state when search fails
             globalStateService.clearSearch();
             globalStateService.setValidationError(error instanceof Error ? error.message : 'Search failed');
+            throw error; // Re-throw to be caught by the outer search method
         }
     }
 }

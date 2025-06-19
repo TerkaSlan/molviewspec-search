@@ -32,8 +32,13 @@ export function SearchInput({
     }, [onClear]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        globalStateService.setSearchQuery(e.target.value || defaultQuery, searchType);
-    }, [searchType]);
+        const value = e.target.value;
+        // Only clear validation error when input changes
+        if (error) {
+            globalStateService.setValidationError(null);
+        }
+        globalStateService.setSearchQuery(value || defaultQuery, searchType);
+    }, [searchType, error]);
 
     const handleSearchTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
         globalStateService.setSearchQuery(query || defaultQuery, e.target.value as SearchType);
@@ -64,7 +69,7 @@ export function SearchInput({
             <div className="search-actions">
                 <button
                     type="submit"
-                    disabled={isLoading || !query}
+                    disabled={isLoading || !query || error !== null}
                     className="search-button"
                 >
                     {isLoading ? 'Searching...' : 'Search'}

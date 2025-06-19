@@ -169,11 +169,22 @@ class GlobalStateService {
   setSearchQuery(query: string, searchType: SearchType) {
     this.debug('setSearchQuery', { query, searchType });
     
-    // Add to recent searches
-    const recentSearches = [
+    // Only skip if exact same query/type AND no validation error AND not currently searching
+    if (
+      this.state$.value.search.query === query &&
+      this.state$.value.search.searchType === searchType &&
+      !this.state$.value.search.validationError &&
+      !this.state$.value.search.isSearching
+    ) {
+      this.debug('setSearchQuery - skipping duplicate search', { query, searchType });
+      return;
+    }
+    
+    // Add to recent searches if query is not empty
+    const recentSearches = query ? [
       query,
       ...this.state$.value.search.recentSearches.filter(q => q !== query)
-    ].slice(0, 10);
+    ].slice(0, 10) : this.state$.value.search.recentSearches;
 
     this.state$.next({
       ...this.state$.value,
@@ -185,6 +196,17 @@ class GlobalStateService {
         validationError: null,
         progress: null,
         recentSearches
+      }
+    });
+  }
+
+  setSearchComplete() {
+    this.debug('setSearchComplete');
+    this.state$.next({
+      ...this.state$.value,
+      search: {
+        ...this.state$.value.search,
+        isSearching: false
       }
     });
   }
@@ -349,7 +371,7 @@ class GlobalStateService {
         ...initialState.search,
         query: this.state$.value.search.query,
         searchType: this.state$.value.search.searchType,
-        isSearching: this.state$.value.search.isSearching,
+        isSearching: false,
         recentSearches: this.state$.value.search.recentSearches
       }
     });
