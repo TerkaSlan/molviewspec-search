@@ -6,7 +6,8 @@ interface SearchInputProps {
     value: string;
     onChange: (value: string) => void;
     onSearch: (searchType: SearchType) => void;
-    isDisabled: boolean;
+    isAlphaFindDisabled: boolean;
+    isFoldseekDisabled: boolean;
     error?: string;
     searchType: SearchType;
     className?: string;
@@ -16,7 +17,8 @@ export function SearchInput({
     value,
     onChange,
     onSearch,
-    isDisabled,
+    isAlphaFindDisabled,
+    isFoldseekDisabled,
     error,
     searchType,
     className = ''
@@ -37,7 +39,7 @@ export function SearchInput({
                     }}
                     placeholder="Enter PDB ID or UniProt ID..."
                     className={`search-input ${isDefaultQuery ? 'default-query' : ''}`}
-                    disabled={isDisabled}
+                    disabled={isAlphaFindDisabled || isFoldseekDisabled}
                 />
             </div>
             {error && (
@@ -49,16 +51,16 @@ export function SearchInput({
                 <button
                     onClick={() => onSearch('alphafind')}
                     className="search-button"
-                    disabled={isDisabled}
+                    disabled={isAlphaFindDisabled}
                 >
-                    {isDisabled ? 'Searching...' : 'AlphaFind Search'}
+                    {isAlphaFindDisabled ? 'Searching...' : 'AlphaFind Search'}
                 </button>
                 <button
                     onClick={() => onSearch('foldseek')}
-                    className="search-button"
-                    disabled={isDisabled}
+                    className="search-button-foldseek"
+                    disabled={isFoldseekDisabled}
                 >
-                    {isDisabled ? 'Searching...' : 'Foldseek Search'}
+                    {isFoldseekDisabled ? 'Searching...' : 'Foldseek Search'}
                 </button>
             </div>
             <div className="search-hint">

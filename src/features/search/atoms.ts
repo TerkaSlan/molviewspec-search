@@ -107,16 +107,37 @@ export const SetSearchProgressAtom = atom(
     }
 );
 
-// Derived state atoms
+// Separate search state atoms for AlphaFind and Foldseek
+export const AlphaFindStateAtom = atom<SearchState>({
+    status: 'idle',
+    query: null,
+    results: [],
+    error: null,
+    progress: null,
+    lastUpdated: null
+});
+
+export const FoldseekStateAtom = atom<SearchState>({
+    status: 'idle',
+    query: null,
+    results: [],
+    error: null,
+    progress: null,
+    lastUpdated: null
+});
+
+// Update SearchInputStateAtom to handle separate states
 export const SearchInputStateAtom = atom((get) => {
-    const state = get(SearchStateAtom);
+    const alphaFindState = get(AlphaFindStateAtom);
+    const foldseekState = get(FoldseekStateAtom);
     const validation = get(ValidationStateAtom);
     
     return {
-        inputValue: state.query?.inputValue ?? '',
-        isDisabled: state.status === 'loading' || validation.isValidating,
-        error: validation.error || state.error?.message,
-        searchType: state.query?.searchType ?? 'alphafind'
+        inputValue: alphaFindState.query?.inputValue ?? foldseekState.query?.inputValue ?? '',
+        isAlphaFindDisabled: alphaFindState.status === 'loading' || validation.isValidating,
+        isFoldseekDisabled: foldseekState.status === 'loading' || validation.isValidating,
+        error: validation.error || alphaFindState.error?.message || foldseekState.error?.message,
+        searchType: alphaFindState.query?.searchType ?? foldseekState.query?.searchType ?? 'alphafind'
     };
 });
 
@@ -235,11 +256,8 @@ export const SelectedSearchResultAtom = atom(
         const targetScene = story.scenes.find(scene => 
             scene.description.includes(result.object_id.toUpperCase())
         );
-        console.log('targetScene', targetScene);
-        console.log('story scenes:', story.scenes.map(s => ({ id: s.id, description: s.description })));
-        
+
         if (targetScene) {
-            console.log('Updating scene to:', targetScene.id);
             // Only need to set ActiveSceneIdAtom now since it's bi-directional
             set(ActiveSceneIdAtom, targetScene.id);
         }

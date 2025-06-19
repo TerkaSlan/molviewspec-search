@@ -2,7 +2,7 @@ import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { StoryAtom, CurrentViewAtom } from '../mvs/atoms';
 import { createMultiSceneStory } from '../mvs/examples/superposition';
-import { SearchInputStateAtom, SearchQueryInputAtom } from './atoms';
+import { SearchInputStateAtom, SearchQueryInputAtom, AlphaFindStateAtom, FoldseekStateAtom } from './atoms';
 import { performSearch, updateSearchType } from './actions';
 import { SearchType } from './types';
 import { useFoldseek } from './hooks/useFoldseek';
@@ -11,7 +11,9 @@ import { defaultQuery } from './examples/preloaded';
 
 export function SearchContainer() {
     const [inputValue, setInputValue] = useAtom(SearchQueryInputAtom);
-    const { isDisabled, error, searchType } = useAtomValue(SearchInputStateAtom);
+    const { isAlphaFindDisabled, isFoldseekDisabled, error, searchType } = useAtomValue(SearchInputStateAtom);
+    const setAlphaFindState = useSetAtom(AlphaFindStateAtom);
+    const setFoldseekState = useSetAtom(FoldseekStateAtom);
     const setStory = useSetAtom(StoryAtom);
     const setCurrentView = useSetAtom(CurrentViewAtom);
     const { getFastaSequence } = useFoldseek();
@@ -20,6 +22,15 @@ export function SearchContainer() {
         try {
             updateSearchType(searchType);
             
+            // Set the appropriate state to loading
+            const setSearchState = searchType === 'alphafind' ? setAlphaFindState : setFoldseekState;
+            setSearchState(prev => ({
+                ...prev,
+                status: 'loading',
+                error: null,
+                lastUpdated: Date.now()
+            }));
+
             // If it's a Foldseek search, first get the FASTA sequence
             if (searchType === 'foldseek') {
                 const fastaSequence = await getFastaSequence(inputValue);
@@ -47,10 +58,29 @@ export function SearchContainer() {
                         subview: '3d-view' 
                     });
                 }
+
+                // Update the appropriate state with results
+                setSearchState(prev => ({
+                    ...prev,
+                    status: 'success',
+                    results: searchResponse.results || [],
+                    error: null,
+                    lastUpdated: Date.now()
+                }));
             }
         } catch (error) {
             console.error('Search failed:', error);
-            // Error state is handled by the performSearch action
+            // Update the appropriate state with error
+            const setSearchState = searchType === 'alphafind' ? setAlphaFindState : setFoldseekState;
+            setSearchState(prev => ({
+                ...prev,
+                status: 'error',
+                error: {
+                    code: error instanceof Error ? error.name : 'UNKNOWN_ERROR',
+                    message: error instanceof Error ? error.message : 'An unknown error occurred'
+                },
+                lastUpdated: Date.now()
+            }));
         }
     };
 
@@ -59,7 +89,8 @@ export function SearchContainer() {
             value={inputValue}
             onChange={setInputValue}
             onSearch={handleSearch}
-            isDisabled={isDisabled}
+            isAlphaFindDisabled={isAlphaFindDisabled}
+            isFoldseekDisabled={isFoldseekDisabled}
             error={error}
             searchType={searchType}
         />
