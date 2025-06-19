@@ -106,7 +106,7 @@ export function App() {
                             Results{state.search.query ? ` for ${state.search.query}` : ''}
                         </div>
                         <div className="panel-content">
-                            <SearchResults model={searchModel} />
+                            <SearchResults model={searchModel} mvsModel={mvsModel} />
                         </div>
                     </div>
                 </div>

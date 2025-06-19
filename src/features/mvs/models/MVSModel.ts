@@ -45,9 +45,26 @@ export class MVSModel extends ReactiveModel {
     // Actions
     setCurrentSceneKey(sceneKey: string | null) {
         console.log('[MVSModel] Setting current scene key:', sceneKey);
+        
+        // Find the corresponding result for this scene
+        let selectedResult: SuperpositionData | null = null;
+        if (sceneKey && this.state$.value.story) {
+            const scene = this.state$.value.story.scenes.find(scene => scene.key === sceneKey);
+            if (scene && 'result' in scene) {
+                selectedResult = scene.result as SuperpositionData;
+            }
+        }
+        
+        console.log('[MVSModel] Updating state with:', {
+            sceneKey,
+            selectedResultId: selectedResult?.object_id
+        });
+        
+        // Update both scene key and selected result atomically
         this.state$.next({
             ...this.state$.value,
-            currentSceneKey: sceneKey
+            currentSceneKey: sceneKey,
+            selectedResult: selectedResult
         });
     }
 

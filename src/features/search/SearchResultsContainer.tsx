@@ -37,6 +37,15 @@ export function SearchResultsContainer({ model, mvsModel }: SearchResultsContain
     const search = useSearchState(model);
     const mvs = useMVSState(mvsModel);
 
+    // Debug MVS model instance
+    React.useEffect(() => {
+        console.log('[SearchResultsContainer] MVS Model Instance:', {
+            model: mvsModel,
+            currentScene: mvs.currentScene,
+            selectedResult: mvs.selectedResult?.object_id
+        });
+    }, [mvsModel, mvs.currentScene, mvs.selectedResult]);
+
     // Debug state changes
     useEffect(() => {
         console.group('[SearchResultsContainer] State Update');
@@ -59,20 +68,25 @@ export function SearchResultsContainer({ model, mvsModel }: SearchResultsContain
 
     // Sync MVS scene changes to search model selected result
     useEffect(() => {
-        if (mvs.currentScene && search.results.length > 0) {
-            // Extract object_id from scene key (format: scene_${object_id})
-            const objectId = mvs.currentScene.replace('scene_', '');
-            const result = search.results.find(r => r.object_id === objectId);
-            if (result) {
-                console.log('[SearchResultsContainer] Syncing MVS scene to search selection:', {
-                    fromScene: objectId,
-                    currentSearchSelection: search.selectedResult?.object_id,
-                    currentMVSSelection: mvs.selectedResult?.object_id
+        console.log('[SearchResultsContainer] MVS state change effect:', {
+            currentScene: mvs.currentScene,
+            mvsSelectedResult: mvs.selectedResult?.object_id,
+            searchSelectedResult: search.selectedResult?.object_id,
+            resultsCount: search.results.length
+        });
+
+        // If MVS has a selected result, sync it to search
+        if (mvs.selectedResult && search.results.length > 0) {
+            const result = search.results.find(r => r.object_id === mvs.selectedResult?.object_id);
+            if (result && result.object_id !== search.selectedResult?.object_id) {
+                console.log('[SearchResultsContainer] Syncing MVS selection to search:', {
+                    fromMVS: mvs.selectedResult.object_id,
+                    currentSearch: search.selectedResult?.object_id
                 });
                 model.setSelectedResult(result);
             }
         }
-    }, [mvs.currentScene, search.results, model, search.selectedResult, mvs.selectedResult]);
+    }, [mvs.selectedResult, mvs.currentScene, search.results, search.selectedResult, model]);
 
     const handleResultClick = useCallback((result: SuperpositionData) => {
         console.log('[SearchResultsContainer] Result clicked:', {
@@ -81,8 +95,12 @@ export function SearchResultsContainer({ model, mvsModel }: SearchResultsContain
             currentSearchSelection: search.selectedResult?.object_id,
             currentMVSSelection: mvs.selectedResult?.object_id
         });
+        // Set selected result in both models to ensure consistent state
         model.setSelectedResult(result);
-    }, [model, mvs.currentScene, search.selectedResult, mvs.selectedResult]);
+        mvsModel.setSelectedResult(result);
+        // Update MVS scene to match the selected result
+        mvsModel.setCurrentSceneKey(`scene_${result.object_id}`);
+    }, [model, mvsModel, mvs.currentScene, search.selectedResult, mvs.selectedResult]);
 
     return (
         <SearchResults

@@ -550,11 +550,12 @@ button:disabled {
 
 .results-table .result-row {
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease-in-out;
+  border-left: 4px solid transparent;
 }
 
 .results-table .result-row:hover {
-  background-color: #f0f0f0;
+  background-color: rgba(59, 130, 246, 0.1);
 }
 
 .results-table .protein-id {
@@ -588,13 +589,14 @@ button:disabled {
 
 /* Search Results Table Active Row */
 .results-table .result-row.active {
-    background-color: rgba(59, 130, 246, 0.2);
+    background-color: rgba(59, 130, 246, 0.15);
     font-weight: 500;
     border-left: 4px solid rgb(59, 130, 246);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
 }
 
 .results-table .result-row.active:hover {
-    background-color: rgba(59, 130, 246, 0.3);
+    background-color: rgba(59, 130, 246, 0.25);
 }
 
 /* Metadata Component Styles */
