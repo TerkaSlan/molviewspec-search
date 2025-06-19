@@ -139,6 +139,17 @@ class MolstarViewModel {
         return this._isLoading;
     }
 
+    async clear() {
+        await this.queue.run(async () => {
+            try {
+                await this.plugin.clear();
+                await Scheduler.immediatePromise();
+            } catch (error) {
+                console.error('Error clearing Molstar plugin:', error);
+            }
+        });
+    }
+
     async loadStory(story: Story) {
         if (!story) return;
 
@@ -179,6 +190,7 @@ let _modelInstance: MolstarViewModel | null = null;
 export function MolstarContainer({ story }: MolstarContainerProps) {
     const modelRef = useRef<MolstarViewModel>();
     const currentSceneKey = useObservable(molstarStateService.getCurrentSceneKey$(), null);
+    const shouldClearPlugin = useObservable(molstarStateService.getShouldClearPlugin$(), false);
 
     if (!_modelInstance) {
         _modelInstance = new MolstarViewModel();
@@ -192,6 +204,15 @@ export function MolstarContainer({ story }: MolstarContainerProps) {
 
     // Set up state management
     useMolstarState(model.plugin, story);
+
+    // Handle plugin clearing
+    useEffect(() => {
+        if (shouldClearPlugin && model) {
+            model.clear().then(() => {
+                molstarStateService.clearPluginComplete();
+            });
+        }
+    }, [shouldClearPlugin, model]);
 
     // Load story when it changes
     useEffect(() => {

@@ -1,4 +1,4 @@
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { Story } from '../../types';
 import { SuperpositionData } from '../../search/types';
@@ -7,11 +7,13 @@ import { createMultiSceneStory } from '../examples/superposition';
 interface MolstarState {
   currentSceneKey: string | null;
   story: Story | null;
+  shouldClearPlugin: boolean;
 }
 
 const initialState: MolstarState = {
   currentSceneKey: null,
-  story: null
+  story: null,
+  shouldClearPlugin: false
 };
 
 class MolstarStateService {
@@ -42,6 +44,12 @@ class MolstarStateService {
       map(state => state.story)
     );
 
+  getShouldClearPlugin$ = (): Observable<boolean> =>
+    this.state$.pipe(
+      distinctUntilChanged((prev, curr) => prev.shouldClearPlugin === curr.shouldClearPlugin),
+      map(state => state.shouldClearPlugin)
+    );
+
   // Actions
   setCurrentSceneKey(sceneKey: string | null) {
     console.log('[MolstarStateService] Setting current scene key:', sceneKey);
@@ -60,7 +68,8 @@ class MolstarStateService {
 
     this.state$.next({
       ...this.state$.value,
-      story
+      story,
+      shouldClearPlugin: false
     });
 
     // If we have a story and no current scene, set the first scene as current
@@ -71,7 +80,28 @@ class MolstarStateService {
 
   clear() {
     console.log('[MolstarStateService] Clearing state');
-    this.state$.next(initialState);
+    // First clear the story and scene key
+    this.state$.next({
+      ...initialState,
+      shouldClearPlugin: true,
+      story: null,
+      currentSceneKey: null
+    });
+
+    // Emit a second update to ensure subscribers get the cleared state
+    setTimeout(() => {
+      this.state$.next({
+        ...initialState,
+        shouldClearPlugin: true
+      });
+    }, 0);
+  }
+
+  clearPluginComplete() {
+    this.state$.next({
+      ...initialState,
+      shouldClearPlugin: false
+    });
   }
 }
 

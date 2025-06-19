@@ -1,4 +1,4 @@
-import { filter } from 'rxjs/operators';
+import { filter, distinctUntilChanged } from 'rxjs/operators';
 import { globalStateService } from '../../../lib/state/GlobalStateService';
 import { SearchType, SuperpositionData, SearchProgressInfo } from '../types';
 import { determineInputType, getPdbToUniprotMapping, getUniprotData } from '../../mapping/api';
@@ -13,16 +13,20 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 class SearchService {
     private static instance: SearchService;
+    private currentSearch: Promise<void> | null = null;
 
     private constructor() {
         // Subscribe to search query changes
         globalStateService.getSearchState$()
             .pipe(
-                filter(state => state.isSearching)
+                filter(state => state.isSearching),
+                distinctUntilChanged((prev, curr) => 
+                    prev.query === curr.query && prev.searchType === curr.searchType
+                )
             )
             .subscribe(async state => {
                 if (!state.query || !state.searchType) return;
-                await this.performSearch(state.query, state.searchType);
+                await this.search(state.query, state.searchType);
             });
     }
 
@@ -35,6 +39,10 @@ class SearchService {
 
     private async validateInput(input: string): Promise<'pdb' | 'uniprot'> {
         try {
+            if (!input || !input.trim()) {
+                throw new Error('Please enter a PDB ID or UniProt ID');
+            }
+
             const inputType = await determineInputType(input.trim());
             
             if (inputType === 'invalid') {
@@ -44,6 +52,8 @@ class SearchService {
             return inputType;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Error validating input';
+            // Clear all search-related state when validation fails
+            globalStateService.clearSearch();
             globalStateService.setValidationError(errorMessage);
             throw error;
         }
@@ -133,8 +143,29 @@ class SearchService {
         throw new Error(`Search failed after ${DEFAULT_MAX_RETRIES} attempts`);
     }
 
+    public async search(query: string, searchType: SearchType): Promise<void> {
+        // If there's already a search in progress, wait for it to complete
+        if (this.currentSearch) {
+            await this.currentSearch;
+        }
+
+        // Start new search
+        this.currentSearch = this.performSearch(query, searchType);
+
+        try {
+            await this.currentSearch;
+        } finally {
+            this.currentSearch = null;
+        }
+    }
+
     private async performSearch(query: string, searchType: SearchType): Promise<void> {
         try {
+            // Clear previous results and errors, but keep the query
+            globalStateService.setValidationError(null);
+            globalStateService.setSearchResults([]);
+            globalStateService.setSelectedResult(null);
+            
             // Validate input
             const inputType = await this.validateInput(query);
             const uniprotId = await this.resolveUniprotId(inputType, query);
@@ -159,6 +190,8 @@ class SearchService {
             }
         } catch (error) {
             console.error('Search failed:', error);
+            // Clear all search-related state when search fails
+            globalStateService.clearSearch();
             globalStateService.setValidationError(error instanceof Error ? error.message : 'Search failed');
         }
     }

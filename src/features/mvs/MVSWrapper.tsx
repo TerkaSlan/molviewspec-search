@@ -5,14 +5,21 @@ import { useObservable } from '../../lib/hooks/use-observable';
 
 export function MVSWrapper() {
     const story = useObservable(molstarStateService.getStory$(), null);
+    const shouldClearPlugin = useObservable(molstarStateService.getShouldClearPlugin$(), false);
 
     // Debug state changes
     useEffect(() => {
         console.log('[MVSWrapper] Story updated:', {
             hasStory: !!story,
-            sceneCount: story?.scenes.length
+            sceneCount: story?.scenes?.length || 0,
+            isClearing: shouldClearPlugin
         });
-    }, [story]);
+    }, [story, shouldClearPlugin]);
+
+    // Don't render container if we're clearing or have no story
+    if (shouldClearPlugin || !story) {
+        return <div className="viewer-container" />;
+    }
 
     return (
         <div className="viewer-container">

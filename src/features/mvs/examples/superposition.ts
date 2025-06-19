@@ -73,6 +73,7 @@ export const createMultiSceneStory = (queryProteinId: string, results: Superposi
       rotation_matrix: result.rotation_matrix,
       translation_vector: result.translation_vector
     }),
+    data: result
   })),
   assets: [],
 });

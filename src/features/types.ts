@@ -12,24 +12,31 @@ export type SceneAsset = {
     content: Uint8Array;
 };
 
-export type SceneData = {
-    id: string;
-    header: string;
-    key: string;
-    description: string;
-    javascript: string;
-    linger_duration_ms?: number;
-    transition_duration_ms?: number;
-};
+export interface SceneData {
+  id: string;
+  key: string;
+  header: string;
+  description: string;
+  javascript: string;
+  linger_duration_ms?: number;
+  transition_duration_ms?: number;
+}
 
-export type Story = {
-    metadata: StoryMetadata;
-    javascript: string;
-    scenes: SceneData[];
-    assets: SceneAsset[];
-};
+export interface Scene extends SceneData {
+  data: any;
+}
 
-export type CurrentView =
-  | { type: 'story-options'; subview: 'story-metadata' | 'story-wide-code' | 'asset-upload' }
-  | { type: 'scene'; id: string; subview: 'scene-options' | '3d-view' }
-  | { type: 'preview'; previous?: CurrentView };
+export interface Story {
+  metadata: {
+    title: string;
+  };
+  javascript: string;
+  scenes: Scene[];
+  assets: any[];
+}
+
+export interface CurrentView {
+  type: 'story-options' | 'scene';
+  subview: 'story-metadata' | '3d-view';
+  id?: string;
+}

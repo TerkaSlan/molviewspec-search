@@ -1,12 +1,28 @@
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-import { SearchState } from '../../features/search/state/SearchStateService';
 import { SuperpositionData, SearchType, SearchProgressInfo } from '../../features/search/types';
+import { Story, CurrentView, Scene } from '../../features/types';
 import { molstarStateService } from '../../features/mvs/services/MolstarStateService';
 
 // Global state interface that combines all feature states
 export interface GlobalState {
-  search: SearchState;
+  search: {
+    query: string | null;
+    searchType: SearchType | null;
+    validationError: string | null;
+    isValidating: boolean;
+    isSearching: boolean;
+    results: SuperpositionData[];
+    progress: SearchProgressInfo | null;
+    selectedResult: SuperpositionData | null;
+    recentSearches: string[];
+  };
+  mvs: {
+    story: Story | null;
+    currentView: CurrentView;
+    activeSceneId: string | null;
+    currentSnapshot: string | null;
+  };
   debug: {
     enabled: boolean;
     lastAction: string;
@@ -17,13 +33,20 @@ export interface GlobalState {
 const initialState: GlobalState = {
   search: {
     query: null,
+    searchType: null,
     validationError: null,
     isValidating: false,
     isSearching: false,
-    searchType: null,
     results: [],
     progress: null,
     selectedResult: null,
+    recentSearches: []
+  },
+  mvs: {
+    story: null,
+    currentView: { type: 'story-options', subview: 'story-metadata' },
+    activeSceneId: null,
+    currentSnapshot: null
   },
   debug: {
     enabled: process.env.NODE_ENV === 'development',
@@ -37,7 +60,6 @@ class GlobalStateService {
   private state$ = new BehaviorSubject<GlobalState>(initialState);
 
   private constructor() {
-    // Private constructor to prevent direct construction calls with 'new'
     this.debug('GlobalStateService initialized');
   }
 
@@ -49,26 +71,21 @@ class GlobalStateService {
   }
 
   private debug(action: string, data?: any) {
-    if (!this.state$.value.debug.enabled) return;
-
-    console.log(`[GlobalState] ${action}`, {
-      timestamp: new Date().toISOString(),
-      data: data || {},
-      currentState: this.state$.value
-    });
-
-    this.state$.next({
-      ...this.state$.value,
-      debug: {
-        ...this.state$.value.debug,
-        lastAction: action,
-        timestamp: Date.now()
-      }
-    });
+    if (this.state$.value.debug.enabled) {
+      console.log(`[GlobalStateService] ${action}`, data);
+      this.state$.next({
+        ...this.state$.value,
+        debug: {
+          ...this.state$.value.debug,
+          lastAction: action,
+          timestamp: Date.now()
+        }
+      });
+    }
   }
 
-  // Search State Selectors
-  getSearchState$ = (): Observable<SearchState> =>
+  // Search Selectors
+  getSearchState$ = (): Observable<GlobalState['search']> =>
     this.state$.pipe(
       map(state => state.search),
       distinctUntilChanged()
@@ -86,7 +103,30 @@ class GlobalStateService {
       distinctUntilChanged()
     );
 
-  // Search State Actions
+  getSelectedResult$ = (): Observable<SuperpositionData | null> =>
+    this.state$.pipe(
+      map(state => state.search.selectedResult),
+      distinctUntilChanged()
+    );
+
+  // MVS Selectors
+  getMVSState$ = (): Observable<GlobalState['mvs']> =>
+    this.state$.pipe(
+      map(state => state.mvs),
+      distinctUntilChanged()
+    );
+
+  getActiveScene$ = (): Observable<Scene | null> =>
+    this.state$.pipe(
+      map(state => {
+        if (!state.mvs.story?.scenes.length) return null;
+        if (!state.mvs.activeSceneId) return state.mvs.story.scenes[0];
+        return state.mvs.story.scenes.find(scene => scene.id === state.mvs.activeSceneId) || state.mvs.story.scenes[0];
+      }),
+      distinctUntilChanged()
+    );
+
+  // Search Actions
   setSearchResults(results: SuperpositionData[]) {
     this.debug('setSearchResults', { resultsCount: results.length });
     
@@ -103,11 +143,20 @@ class GlobalStateService {
     this.state$.next(nextState);
 
     // Update Molstar state with new results
-    molstarStateService.updateFromSearchResults(nextState.search.query, results);
+    if (nextState.search.query) {
+      molstarStateService.updateFromSearchResults(nextState.search.query, results);
+    }
   }
 
   setSearchQuery(query: string, searchType: SearchType) {
     this.debug('setSearchQuery', { query, searchType });
+    
+    // Add to recent searches
+    const recentSearches = [
+      query,
+      ...this.state$.value.search.recentSearches.filter(q => q !== query)
+    ].slice(0, 10);
+
     this.state$.next({
       ...this.state$.value,
       search: {
@@ -116,7 +165,8 @@ class GlobalStateService {
         searchType,
         isSearching: true,
         validationError: null,
-        progress: null
+        progress: null,
+        recentSearches
       }
     });
   }
@@ -155,12 +205,15 @@ class GlobalStateService {
   setSelectedResult(result: SuperpositionData | null) {
     this.debug('setSelectedResult', { result });
     
-    // Update the selected result in global state
     this.state$.next({
       ...this.state$.value,
       search: {
         ...this.state$.value.search,
         selectedResult: result
+      },
+      mvs: {
+        ...this.state$.value.mvs,
+        activeSceneId: result ? `scene_${result.object_id}` : null
       }
     });
 
@@ -172,26 +225,80 @@ class GlobalStateService {
     }
   }
 
-  clearSearch() {
-    this.debug('clearSearch');
+  // MVS Actions
+  setStory(story: Story | null) {
+    this.debug('setStory', { story });
     this.state$.next({
       ...this.state$.value,
-      search: initialState.search
+      mvs: {
+        ...this.state$.value.mvs,
+        story,
+        activeSceneId: story?.scenes[0]?.id || null
+      }
+    });
+  }
+
+  setCurrentView(view: CurrentView) {
+    this.debug('setCurrentView', { view });
+    this.state$.next({
+      ...this.state$.value,
+      mvs: {
+        ...this.state$.value.mvs,
+        currentView: view,
+        activeSceneId: view.type === 'scene' ? view.id ?? null : this.state$.value.mvs.activeSceneId    
+      }
+    });
+  }
+
+  setActiveSceneId(sceneId: string | null) {
+    this.debug('setActiveSceneId', { sceneId });
+    this.state$.next({
+      ...this.state$.value,
+      mvs: {
+        ...this.state$.value.mvs,
+        activeSceneId: sceneId,
+        currentView: sceneId 
+          ? { type: 'scene', id: sceneId, subview: '3d-view' }
+          : this.state$.value.mvs.currentView
+      }
+    });
+  }
+
+  setCurrentSnapshot(snapshot: string | null) {
+    this.debug('setCurrentSnapshot', { snapshot });
+    this.state$.next({
+      ...this.state$.value,
+      mvs: {
+        ...this.state$.value.mvs,
+        currentSnapshot: snapshot
+      }
+    });
+  }
+
+  // Global Actions
+  clearAll() {
+    this.debug('clearAll');
+    this.state$.next({
+      ...initialState,
+      debug: this.state$.value.debug
     });
     molstarStateService.clear();
   }
 
-  // Debug Actions
-  enableDebug(enabled: boolean) {
+  clearSearch() {
+    this.debug('clearSearch');
     this.state$.next({
       ...this.state$.value,
-      debug: {
-        ...this.state$.value.debug,
-        enabled
+      search: {
+        ...initialState.search,
+        query: this.state$.value.search.query,
+        searchType: this.state$.value.search.searchType,
+        isSearching: this.state$.value.search.isSearching,
+        recentSearches: this.state$.value.search.recentSearches
       }
     });
+    molstarStateService.clear();
   }
 }
 
-// Export singleton instance
 export const globalStateService = GlobalStateService.getInstance(); 
