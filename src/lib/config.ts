@@ -1,20 +1,9 @@
-export interface FeatureFlags {
-    useNewStateManagement: boolean;
-}
-
-const defaultFlags: FeatureFlags = {
-    useNewStateManagement: true,
-};
-
-// Allow runtime configuration through URL parameters for testing
-function parseFeatureFlags(): FeatureFlags {
-    const params = new URLSearchParams(window.location.search);
-    return {
-        ...defaultFlags,
-        useNewStateManagement: params.get('useNewState') === 'true',
-    };
-}
-
 export const config = {
-    features: parseFeatureFlags(),
+    api: {
+        baseUrl: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000',
+        endpoints: {
+            search: '/api/search',
+            mapping: '/api/mapping'
+        }
+    }
 }; 

@@ -1,8 +1,8 @@
 import React, { useCallback } from 'react';
 import { SearchType } from '../types';
 import { defaultQuery } from '../examples/preloaded';
-import { useSearchViewState } from '../../../lib/hooks/use-global-state';
-import { globalStateService } from '../../../lib/state/GlobalStateService';
+import { SearchModel } from '../models/SearchModel';
+import { useObservable } from '../../../lib/hooks/use-observable';
 
 interface SearchInputProps {
     value: string;
@@ -10,6 +10,7 @@ interface SearchInputProps {
     error: string | null;
     onSearch: (value: string, searchType: SearchType) => void;
     onClear: () => void;
+    model: SearchModel;
 }
 
 export function SearchInput({
@@ -17,9 +18,11 @@ export function SearchInput({
     isLoading,
     error,
     onSearch,
-    onClear
+    onClear,
+    model
 }: SearchInputProps) {
-    const { query, searchType } = useSearchViewState();
+    const query = useObservable(model.getQuery$(), defaultQuery);
+    const searchType = useObservable(model.getSearchType$(), 'alphafind' as SearchType) || 'alphafind';
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
@@ -27,22 +30,22 @@ export function SearchInput({
     }, [query, searchType, onSearch]);
 
     const handleClear = useCallback(() => {
-        globalStateService.clearSearch();
+        model.clearSearch();
         onClear();
-    }, [onClear]);
+    }, [model, onClear]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         // Only clear validation error when input changes
         if (error) {
-            globalStateService.setValidationError(null);
+            model.setValidationError(null);
         }
-        globalStateService.setSearchQuery(value || defaultQuery, searchType);
-    }, [searchType, error]);
+        model.setSearchQuery(value || defaultQuery, searchType);
+    }, [model, searchType, error]);
 
     const handleSearchTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-        globalStateService.setSearchQuery(query || defaultQuery, e.target.value as SearchType);
-    }, [query]);
+        model.setSearchQuery(query || defaultQuery, e.target.value as SearchType);
+    }, [model, query]);
 
     return (
         <form onSubmit={handleSubmit} className="search-form">

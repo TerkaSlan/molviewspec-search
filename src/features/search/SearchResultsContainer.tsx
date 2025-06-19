@@ -1,37 +1,52 @@
 import React, { useEffect } from 'react';
-import { useSearchState } from '../../lib/hooks/use-global-state';
+import { useReactiveModel } from '../../lib/hooks/use-reactive-model';
+import { useObservable } from '../../lib/hooks/use-observable';
 import { SearchResults } from './ui/SearchResults';
-import { globalStateService } from '../../lib/state/GlobalStateService';
+import { SearchModel } from './models/SearchModel';
 import { SuperpositionData } from './types';
+import { MVSModel } from '../mvs/models/MVSModel';
 
-export function SearchResultsContainer() {
-    const searchState = useSearchState();
+interface SearchResultsContainerProps {
+    model: SearchModel;
+    mvsModel: MVSModel;
+}
+
+export function SearchResultsContainer({ model, mvsModel }: SearchResultsContainerProps) {
+    // Connect the model to React's lifecycle
+    useReactiveModel(model);
+
+    // Subscribe to state
+    const results = useObservable(model.getResults$(), []);
+    const query = useObservable(model.getQuery$(), null);
+    const error = useObservable(model.getValidationError$(), null);
+    const isSearching = useObservable(model.getIsSearching$(), false);
 
     // Debug state changes
     useEffect(() => {
-        console.log('[SearchResultsContainer] Results updated:', { count: searchState?.results.length || 0 });
-    }, [searchState?.results]);
+        console.log('[SearchResultsContainer] Results updated:', { count: results.length });
+    }, [results]);
 
     useEffect(() => {
         console.log('[SearchResultsContainer] Search status:', { 
-            isSearching: searchState?.isSearching, 
-            error: searchState?.validationError 
+            isSearching, 
+            error 
         });
-    }, [searchState?.isSearching, searchState?.validationError]);
+    }, [isSearching, error]);
 
     const handleResultClick = (result: SuperpositionData) => {
         console.log('[SearchResultsContainer] Result clicked:', result.object_id);
-        globalStateService.setSelectedResult(result);
+        model.setSelectedResult(result);
     };
 
     return (
         <SearchResults
-            results={searchState?.results || []}
-            error={searchState?.validationError ? { message: searchState.validationError } : null}
-            progress={searchState?.progress || null}
-            isEmpty={!searchState?.query}
-            hasResults={(searchState?.results.length || 0) > 0}
+            results={results}
+            error={error ? { message: error } : null}
+            progress={null} // TODO: Add progress tracking to model if needed
+            isEmpty={!query}
+            hasResults={results.length > 0}
             onResultClick={handleResultClick}
+            model={mvsModel}
         />
     );
 } 

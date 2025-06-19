@@ -6,45 +6,60 @@ import { SuperpositionData } from '../../search/types';
 import { createMultiSceneStory } from '../examples/superposition';
 
 interface MVSState {
-    currentSceneKey: string | null;
     story: Story | null;
+    currentSceneKey: string | null;
     shouldClearPlugin: boolean;
+    selectedResult: SuperpositionData | null;
 }
 
 const initialState: MVSState = {
     currentSceneKey: null,
     story: null,
-    shouldClearPlugin: false
+    shouldClearPlugin: false,
+    selectedResult: null
 };
 
 export class MVSModel extends ReactiveModel {
-    private state = new BehaviorSubject<MVSState>(initialState);
+    private state$ = new BehaviorSubject<MVSState>(initialState);
 
     // Selectors
-    getCurrentSceneKey$ = (): Observable<string | null> =>
-        this.state.pipe(
-            map(state => state.currentSceneKey),
-            distinctUntilChanged()
-        );
-
     getStory$ = (): Observable<Story | null> =>
-        this.state.pipe(
+        this.state$.pipe(
             map(state => state.story),
             distinctUntilChanged()
         );
 
+    getCurrentSceneKey$ = (): Observable<string | null> =>
+        this.state$.pipe(
+            map(state => state.currentSceneKey),
+            distinctUntilChanged()
+        );
+
     getShouldClearPlugin$ = (): Observable<boolean> =>
-        this.state.pipe(
+        this.state$.pipe(
             map(state => state.shouldClearPlugin),
+            distinctUntilChanged()
+        );
+
+    getSelectedResult$ = (): Observable<SuperpositionData | null> =>
+        this.state$.pipe(
+            map(state => state.selectedResult),
             distinctUntilChanged()
         );
 
     // Actions
     setCurrentSceneKey(sceneKey: string | null) {
         console.log('[MVSModel] Setting current scene key:', sceneKey);
-        this.state.next({
-            ...this.state.value,
+        this.state$.next({
+            ...this.state$.value,
             currentSceneKey: sceneKey
+        });
+    }
+
+    setSelectedResult(result: SuperpositionData) {
+        this.state$.next({
+            ...this.state$.value,
+            selectedResult: result
         });
     }
 
@@ -61,14 +76,14 @@ export class MVSModel extends ReactiveModel {
             metadata: story?.metadata
         });
 
-        this.state.next({
-            ...this.state.value,
+        this.state$.next({
+            ...this.state$.value,
             story,
             shouldClearPlugin: false
         });
 
         // If we have a story and no current scene, set the first scene as current
-        if (story?.scenes[0] && !this.state.value.currentSceneKey) {
+        if (story?.scenes[0] && !this.state$.value.currentSceneKey) {
             this.setCurrentSceneKey(story.scenes[0].key);
         }
     }
@@ -76,7 +91,7 @@ export class MVSModel extends ReactiveModel {
     clear() {
         console.log('[MVSModel] Clearing state');
         // First clear the story and scene key
-        this.state.next({
+        this.state$.next({
             ...initialState,
             shouldClearPlugin: true,
             story: null,
@@ -85,7 +100,7 @@ export class MVSModel extends ReactiveModel {
 
         // Emit a second update to ensure subscribers get the cleared state
         setTimeout(() => {
-            this.state.next({
+            this.state$.next({
                 ...initialState,
                 shouldClearPlugin: true
             });
@@ -93,7 +108,7 @@ export class MVSModel extends ReactiveModel {
     }
 
     clearPluginComplete() {
-        this.state.next({
+        this.state$.next({
             ...initialState,
             shouldClearPlugin: false
         });
@@ -106,10 +121,6 @@ export class MVSModel extends ReactiveModel {
 
     // Debug helper
     getDebugState() {
-        return {
-            currentState: this.state.value,
-            hasSubscribers: this.state.observed,
-            disposeActionsCount: (this as any).disposeActions?.length || 0
-        };
+        return this.state$.value;
     }
 } 

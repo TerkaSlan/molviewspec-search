@@ -1,28 +1,24 @@
-import { useCallback } from 'react';
-import { getPdbToUniprotMapping } from '../api';
-import { globalStateService } from '../../../lib/state/GlobalStateService';
-import { useGlobalState } from '../../../lib/hooks/use-global-state';
+import { useCallback, useMemo } from 'react';
+import { useReactiveModel } from '../../../lib/hooks/use-reactive-model';
+import { useObservable } from '../../../lib/hooks/use-observable';
+import { MappingModel } from '../models/MappingModel';
 
 export function useMapping() {
-    const mappingState = useGlobalState(service => service.getMappingState$());
+    const model = useMemo(() => new MappingModel(), []);
+    useReactiveModel(model);
+
+    const data = useObservable(model.getData$(), null);
+    const isLoading = useObservable(model.getIsLoading$(), false);
+    const error = useObservable(model.getError$(), null);
 
     const fetchMapping = useCallback(async (pdbId: string) => {
-        try {
-            globalStateService.setMappingLoading(true);
-            const data = await getPdbToUniprotMapping(pdbId);
-            globalStateService.setMappingData(data);
-            return data;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch mapping';
-            globalStateService.setMappingError(errorMessage);
-            throw error;
-        }
-    }, []);
+        return model.fetchMapping(pdbId);
+    }, [model]);
 
     return {
-        mapping: mappingState?.data || null,
-        isLoading: mappingState?.isLoading || false,
-        error: mappingState?.error || null,
+        mapping: data,
+        isLoading,
+        error,
         fetchMapping
     };
 } 

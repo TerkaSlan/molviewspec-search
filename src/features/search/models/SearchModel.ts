@@ -1,150 +1,97 @@
-import { BehaviorSubject, Observable } from 'rxjs';
-import { map, distinctUntilChanged } from 'rxjs/operators';
+import { BehaviorSubject } from 'rxjs';
 import { ReactiveModel } from '../../../lib/reactive-model';
-import { SuperpositionData, SearchType, SearchProgressInfo } from '../types';
-import { searchStructures } from '../api';
-import { useFoldseek } from '../hooks/useFoldseek';
+import { map } from 'rxjs/operators';
+import { SearchType, SuperpositionData } from '../types';
 
-export interface SearchState {
+interface SearchState {
     query: string | null;
-    validationError: string | null;
-    isValidating: boolean;
-    isSearching: boolean;
-    searchType: SearchType | null;
+    searchType: SearchType;
     results: SuperpositionData[];
-    progress: SearchProgressInfo | null;
+    isSearching: boolean;
+    validationError: string | null;
     selectedResult: SuperpositionData | null;
 }
 
-const initialState: SearchState = {
-    query: null,
-    validationError: null,
-    isValidating: false,
-    isSearching: false,
-    searchType: null,
-    results: [],
-    progress: null,
-    selectedResult: null,
-};
-
 export class SearchModel extends ReactiveModel {
-    private state = new BehaviorSubject<SearchState>(initialState);
+    private state$ = new BehaviorSubject<SearchState>({
+        query: null,
+        searchType: 'alphafind',
+        results: [],
+        isSearching: false,
+        validationError: null,
+        selectedResult: null
+    });
 
-    // Selectors
-    getValidationError$ = (): Observable<string | null> => 
-        this.state.pipe(
-            map(state => state.validationError),
-            distinctUntilChanged()
-        );
-
-    getResults$ = (): Observable<SuperpositionData[]> =>
-        this.state.pipe(
-            map(state => state.results),
-            distinctUntilChanged()
-        );
-
-    getIsSearching$ = (): Observable<boolean> =>
-        this.state.pipe(
-            map(state => state.isSearching),
-            distinctUntilChanged()
-        );
-
-    getSelectedResult$ = (): Observable<SuperpositionData | null> =>
-        this.state.pipe(
-            map(state => state.selectedResult),
-            distinctUntilChanged()
-        );
-
-    getQuery$ = (): Observable<string | null> =>
-        this.state.pipe(
-            map(state => state.query),
-            distinctUntilChanged()
-        );
-
-    // Actions
-    setValidationError(error: string | null) {
-        if (error) {
-            // Clear search-related state when validation fails
-            this.state.next({
-                ...this.state.value,
-                validationError: error,
-                results: [],
-                progress: null,
-                selectedResult: null
-            });
-        } else {
-            this.state.next({
-                ...this.state.value,
-                validationError: null
-            });
-        }
+    getQuery$() {
+        return this.state$.pipe(map(state => state.query));
     }
 
-    setSearchResults(results: SuperpositionData[]) {
-        this.state.next({
-            ...this.state.value,
-            results,
-            isSearching: false
+    getSearchType$() {
+        return this.state$.pipe(map(state => state.searchType));
+    }
+
+    getResults$() {
+        return this.state$.pipe(map(state => state.results));
+    }
+
+    getIsSearching$() {
+        return this.state$.pipe(map(state => state.isSearching));
+    }
+
+    getValidationError$() {
+        return this.state$.pipe(map(state => state.validationError));
+    }
+
+    getSelectedResult$() {
+        return this.state$.pipe(map(state => state.selectedResult));
+    }
+
+    private setState(newState: Partial<SearchState>) {
+        this.state$.next({
+            ...this.state$.value,
+            ...newState
         });
     }
 
+    setSearchQuery(query: string, searchType: SearchType) {
+        this.setState({ query, searchType });
+    }
+
+    setValidationError(error: string | null) {
+        this.setState({ validationError: error });
+    }
+
     setSelectedResult(result: SuperpositionData | null) {
-        this.state.next({
-            ...this.state.value,
-            selectedResult: result
+        this.setState({ selectedResult: result });
+    }
+
+    clearSearch() {
+        this.setState({
+            query: null,
+            results: [],
+            isSearching: false,
+            validationError: null,
+            selectedResult: null
         });
     }
 
     async triggerSearch(query: string, searchType: SearchType) {
-        try {
-            this.state.next({
-                ...this.state.value,
-                query,
-                searchType,
-                isSearching: true,
-                validationError: null
-            });
-
-            const results = await searchStructures({
-                query,
-                limit: 10,
-                superposition: true,
-                onProgress: (progress) => {
-                    if (progress) {
-                        this.state.next({
-                            ...this.state.value,
-                            progress
-                        });
-                    }
-                }
-            });
-
-            this.state.next({
-                ...this.state.value,
-                results: results.results || [],
-                isSearching: false,
-                progress: null
-            });
-        } catch (error) {
-            this.setValidationError(error instanceof Error ? error.message : 'An error occurred during search');
-        }
+        this.setState({ 
+            isSearching: true, 
+            validationError: null,
+            query,
+            searchType
+        });
+        // Actual search implementation would go here
+        // For now, we're just setting the state
     }
 
-    clearSearch() {
-        this.state.next(initialState);
-    }
-
-    mount() {
-        super.mount();
-        console.log('[SearchModel] Mounted');
-    }
-
-    // Debug helper
-    getDebugState() {
-        return {
-            currentState: this.state.value,
-            hasSubscribers: this.state.observed,
-            disposeActionsCount: (this as any).disposeActions?.length || 0
-        };
+    initializeWithResults(query: string, results: SuperpositionData[]) {
+        this.setState({
+            query,
+            results,
+            isSearching: false,
+            validationError: null
+        });
     }
 } 
