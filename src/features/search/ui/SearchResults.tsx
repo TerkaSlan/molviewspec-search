@@ -33,20 +33,6 @@ function SearchProgress({ progress }: SearchProgressProps) {
     );
 }
 
-interface SearchErrorProps {
-    error: { message: string } | null;
-}
-
-function SearchError({ error }: SearchErrorProps) {
-    if (!error) return null;
-
-    return (
-        <div className="search-error">
-            {error.message}
-        </div>
-    );
-}
-
 interface ResultsTableProps {
     results: SuperpositionData[];
     onResultClick: (result: SuperpositionData) => void;
@@ -114,7 +100,6 @@ export function SearchResults({
     return (
         <div className="search-results">
             <SearchProgress progress={progress} />
-            <SearchError error={error} />
             {hasResults && <ResultsTable results={results} onResultClick={onResultClick} />}
         </div>
     );

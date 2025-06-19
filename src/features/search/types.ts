@@ -45,7 +45,7 @@ export interface AlphaFindSearchOptions {
     maxRetries?: number;
     initialBackoffMs?: number;
     superposition?: boolean;
-    onProgress?: (status: SearchProgressInfo) => void;
+    onProgress?: (status: SearchProgressInfo | null) => void;
     onPartialResults?: (data: AlphaFindResponse) => void;
 }
 

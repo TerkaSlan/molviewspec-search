@@ -98,7 +98,7 @@ export const SetSearchErrorAtom = atom(
 
 export const SetSearchProgressAtom = atom(
     null,
-    (get, set, progress: SearchProgressInfo) => {
+    (get, set, progress: SearchProgressInfo | null) => {
         set(SearchStateAtom, (prev) => ({
             ...prev,
             progress,

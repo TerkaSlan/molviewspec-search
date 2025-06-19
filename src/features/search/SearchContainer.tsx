@@ -2,24 +2,48 @@ import React from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { StoryAtom, CurrentViewAtom } from '../mvs/atoms';
 import { createMultiSceneStory } from '../mvs/examples/superposition';
-import { SearchInputStateAtom, SearchQueryInputAtom, AlphaFindStateAtom, FoldseekStateAtom } from './atoms';
+import { SearchInputStateAtom, SearchQueryInputAtom, AlphaFindStateAtom, FoldseekStateAtom, ValidationStateAtom } from './atoms';
 import { performSearch, updateSearchType } from './actions';
 import { SearchType } from './types';
 import { useFoldseek } from './hooks/useFoldseek';
 import { SearchInput } from './ui/SearchInput';
 import { defaultQuery } from './examples/preloaded';
+import { determineInputType } from '../mapping/api';
 
 export function SearchContainer() {
     const [inputValue, setInputValue] = useAtom(SearchQueryInputAtom);
     const { isAlphaFindDisabled, isFoldseekDisabled, error, searchType } = useAtomValue(SearchInputStateAtom);
     const setAlphaFindState = useSetAtom(AlphaFindStateAtom);
     const setFoldseekState = useSetAtom(FoldseekStateAtom);
+    const setValidationState = useSetAtom(ValidationStateAtom);
     const setStory = useSetAtom(StoryAtom);
     const setCurrentView = useSetAtom(CurrentViewAtom);
     const { getFastaSequence } = useFoldseek();
 
     const handleSearch = async (searchType: SearchType) => {
         try {
+            // Set validation state to loading
+            setValidationState({
+                isValidating: true,
+                error: null
+            });
+
+            // Validate input first
+            const inputType = await determineInputType(inputValue.trim());
+            if (inputType === 'invalid') {
+                setValidationState({
+                    isValidating: false,
+                    error: 'Invalid input: Please enter a valid PDB ID or UniProt ID'
+                });
+                return; // Stop here if validation fails
+            }
+
+            // Clear validation state and proceed with search
+            setValidationState({
+                isValidating: false,
+                error: null
+            });
+
             updateSearchType(searchType);
             
             // Set the appropriate state to loading

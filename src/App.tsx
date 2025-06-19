@@ -4,6 +4,7 @@ import { SearchContainer } from './features/search/SearchContainer';
 import { SearchResultsContainer } from './features/search/SearchResultsContainer';
 import { MVSWrapper } from './features/mvs/MVSWrapper';
 import { InitializeStoryAtom } from './features/search/atoms';
+import { MetadataContainer } from './features/search/MetadataContainer';
 /**
  * Main application component
  * Organizes the UI layout and wraps components with the ModelProvider
@@ -50,6 +51,7 @@ const App: React.FC = () => {
       <div className="bottom-panel panel">
         <div className="panel-header">Structure Info</div>
         <div className="panel-content">
+          <MetadataContainer />
         </div>
       </div>
     </div>
