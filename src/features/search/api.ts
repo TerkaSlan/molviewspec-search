@@ -1,6 +1,6 @@
-import { API_BASE_URL } from './state';
 import { AlphaFindResponse, AlphaFindSearchOptions, SearchProgressInfo } from './types';
 
+const API_BASE_URL = 'https://api.alphafind.dyn.cloud.e-infra.cz';
 const MIN_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 10000;
 const DEFAULT_MAX_RETRIES = 3;
