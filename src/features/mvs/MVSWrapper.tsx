@@ -1,16 +1,13 @@
 import React, { useEffect } from 'react';
-import { useReactiveModel } from '../../lib/hooks/use-reactive-model';
-import { useBehavior } from '../../lib/hooks/use-behavior';
-import { SearchModel } from '../search/models/SearchModel';
+import { useSearchState } from '../../lib/hooks/use-global-state';
 import { MolstarContainer } from './MolstarContainer';
+import { createMultiSceneStory } from './examples/superposition';
 
-interface MVSWrapperProps {
-    model: SearchModel;
-}
-
-export function MVSWrapper({ model }: MVSWrapperProps) {
-    useReactiveModel(model);
-    const story = useBehavior(model.story$);
+export function MVSWrapper() {
+    const searchState = useSearchState();
+    const story = searchState?.query && searchState?.results.length > 0
+        ? createMultiSceneStory(searchState.query, searchState.results)
+        : null;
 
     // Debug state changes
     useEffect(() => {

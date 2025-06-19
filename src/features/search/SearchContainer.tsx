@@ -1,41 +1,34 @@
 import React from 'react';
-import { useReactiveModel } from '../../lib/hooks/use-reactive-model';
-import { useBehavior } from '../../lib/hooks/use-behavior';
-import { SearchModel } from './models/SearchModel';
+import { useSearchState } from '../../lib/hooks/use-global-state';
 import { SearchInput } from './ui/SearchInput';
 import { SearchType } from './types';
 import { defaultQuery } from './examples/preloaded';
+import { globalStateService } from '../../lib/state/GlobalStateService';
 
-interface SearchContainerProps {
-    model: SearchModel;
-}
+export function SearchContainer() {
+    const searchState = useSearchState();
 
-export function SearchContainer({ model }: SearchContainerProps) {
-    useReactiveModel(model);
-
-    // Subscribe to model state
-    const query = useBehavior(model.query$) || defaultQuery;
-    const searchType = useBehavior(model.searchType$);
-    const validationError = useBehavior(model.validationError$);
-    const isSearching = useBehavior(model.isSearching$);
-
-    const handleSearch = async (newSearchType: SearchType) => {
+    const handleSearch = async (searchType: SearchType) => {
         try {
-            await model.search(query, newSearchType);
+            const query = searchState?.query || defaultQuery;
+            globalStateService.setSearchQuery(query, searchType);
+            // Note: The actual search logic should be moved to a separate service
+            // that observes the global state and performs the search
         } catch (error) {
             console.error('Search failed:', error);
+            globalStateService.setValidationError(error instanceof Error ? error.message : 'Search failed');
         }
     };
 
     return (
         <SearchInput
-            value={query}
-            onChange={model.setQuery.bind(model)}
+            value={searchState?.query || defaultQuery}
+            onChange={(query: string) => globalStateService.setSearchQuery(query, searchState?.searchType || 'alphafind')}
             onSearch={handleSearch}
-            isAlphaFindDisabled={isSearching}
-            isFoldseekDisabled={isSearching}
-            error={validationError}
-            searchType={searchType}
+            isAlphaFindDisabled={searchState?.isSearching || false}
+            isFoldseekDisabled={searchState?.isSearching || false}
+            error={searchState?.validationError || null}
+            searchType={searchState?.searchType || 'alphafind'}
         />
     );
 } 

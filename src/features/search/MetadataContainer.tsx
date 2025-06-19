@@ -1,41 +1,31 @@
 import React, { useEffect } from 'react';
-import { useReactiveModel } from '../../lib/hooks/use-reactive-model';
-import { useBehavior } from '../../lib/hooks/use-behavior';
-import { SearchModel } from './models/SearchModel';
+import { useSearchState } from '../../lib/hooks/use-global-state';
 import { Metadata } from './ui/Metadata';
 
-interface MetadataContainerProps {
-    model: SearchModel;
-}
-
-export function MetadataContainer({ model }: MetadataContainerProps) {
-    useReactiveModel(model);
-    
-    const selectedResult = useBehavior(model.selectedResult$);
-    const results = useBehavior(model.results$);
-    const query = useBehavior(model.query$);
+export function MetadataContainer() {
+    const searchState = useSearchState();
     
     // Debug state changes
     useEffect(() => {
-        console.log('[MetadataContainer] Selected result:', selectedResult?.object_id);
-    }, [selectedResult]);
+        console.log('[MetadataContainer] Selected result:', searchState?.selectedResult?.object_id);
+    }, [searchState?.selectedResult]);
 
     useEffect(() => {
         console.log('[MetadataContainer] Query/Results:', { 
-            query, 
-            resultCount: results?.length 
+            query: searchState?.query, 
+            resultCount: searchState?.results.length 
         });
-    }, [query, results]);
+    }, [searchState?.query, searchState?.results]);
 
     // If there are no results or query, don't render anything
-    if (!results?.length || !query) {
+    if (!searchState?.results.length || !searchState?.query) {
         return null;
     }
 
     return (
         <Metadata 
-            queryProteinId={query}
-            selectedResult={selectedResult}
+            queryProteinId={searchState.query}
+            selectedResult={searchState.selectedResult}
         />
     );
 } 

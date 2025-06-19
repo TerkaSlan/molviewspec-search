@@ -1,42 +1,36 @@
 import React, { useEffect } from 'react';
-import { useReactiveModel } from '../../lib/hooks/use-reactive-model';
-import { useBehavior } from '../../lib/hooks/use-behavior';
-import { SearchModel } from './models/SearchModel';
+import { useSearchState } from '../../lib/hooks/use-global-state';
 import { SearchResults } from './ui/SearchResults';
+import { globalStateService } from '../../lib/state/GlobalStateService';
+import { SuperpositionData } from './types';
 
-interface SearchResultsContainerProps {
-    model: SearchModel;
-}
-
-export function SearchResultsContainer({ model }: SearchResultsContainerProps) {
-    useReactiveModel(model);
-
-    const results = useBehavior(model.results$) || [];
-    const validationError = useBehavior(model.validationError$);
-    const isSearching = useBehavior(model.isSearching$);
-    const query = useBehavior(model.query$);
+export function SearchResultsContainer() {
+    const searchState = useSearchState();
 
     // Debug state changes
     useEffect(() => {
-        console.log('[SearchResultsContainer] Results updated:', { count: results.length });
-    }, [results]);
+        console.log('[SearchResultsContainer] Results updated:', { count: searchState?.results.length || 0 });
+    }, [searchState?.results]);
 
     useEffect(() => {
-        console.log('[SearchResultsContainer] Search status:', { isSearching, error: validationError });
-    }, [isSearching, validationError]);
+        console.log('[SearchResultsContainer] Search status:', { 
+            isSearching: searchState?.isSearching, 
+            error: searchState?.validationError 
+        });
+    }, [searchState?.isSearching, searchState?.validationError]);
 
-    const handleResultClick = (result: any) => {
+    const handleResultClick = (result: SuperpositionData) => {
         console.log('[SearchResultsContainer] Result clicked:', result.object_id);
-        model.setSelectedResult(result);
+        globalStateService.setSelectedResult(result);
     };
 
     return (
         <SearchResults
-            results={results}
-            error={validationError ? { message: validationError } : null}
-            progress={isSearching ? { stage: 'processing', message: 'Searching...', attempt: 1, maxAttempts: 3 } : null}
-            isEmpty={!query}
-            hasResults={results.length > 0}
+            results={searchState?.results || []}
+            error={searchState?.validationError ? { message: searchState.validationError } : null}
+            progress={searchState?.progress || null}
+            isEmpty={!searchState?.query}
+            hasResults={(searchState?.results.length || 0) > 0}
             onResultClick={handleResultClick}
         />
     );
