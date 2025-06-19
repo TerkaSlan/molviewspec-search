@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAtomValue } from 'jotai';
 import { SearchProgressInfo, SuperpositionData } from '../types';
-import { CurrentSnapshotAtom } from '../../mvs/atoms';
+import { useObservable } from '../../../lib/hooks/use-observable';
+import { molstarStateService } from '../../mvs/services/MolstarStateService';
 
 interface SearchProgressProps {
     progress: SearchProgressInfo | null;
@@ -39,7 +39,7 @@ interface ResultsTableProps {
 }
 
 function ResultsTable({ results, onResultClick }: ResultsTableProps) {
-    const currentSnapshot = useAtomValue(CurrentSnapshotAtom);
+    const currentSceneKey = useObservable(molstarStateService.getCurrentSceneKey$(), null);
     
     return (
         <div className="results-container">
@@ -55,7 +55,7 @@ function ResultsTable({ results, onResultClick }: ResultsTableProps) {
                 <tbody>
                     {results.map((result) => {
                         const sceneKey = `scene_${result.object_id}`;
-                        const isActive = currentSnapshot === sceneKey;
+                        const isActive = currentSceneKey === sceneKey;
                         
                         return (
                             <tr

@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { useSearchState } from '../../lib/hooks/use-global-state';
+import { useObservable } from '../../lib/hooks/use-observable';
+import { globalStateService } from '../../lib/state/GlobalStateService';
 import { Metadata } from './ui/Metadata';
 
 export function MetadataContainer() {
-    const searchState = useSearchState();
+    const searchState = useObservable(globalStateService.getSearchState$(), null);
     
     // Debug state changes
     useEffect(() => {
@@ -13,12 +14,12 @@ export function MetadataContainer() {
     useEffect(() => {
         console.log('[MetadataContainer] Query/Results:', { 
             query: searchState?.query, 
-            resultCount: searchState?.results.length 
+            resultCount: searchState?.results?.length 
         });
     }, [searchState?.query, searchState?.results]);
 
-    // If there are no results or query, don't render anything
-    if (!searchState?.results.length || !searchState?.query) {
+    // If there's no search state, query, or results, don't render anything
+    if (!searchState || !searchState.query || !searchState.results?.length) {
         return null;
     }
 

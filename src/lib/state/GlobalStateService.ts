@@ -2,8 +2,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { SearchState } from '../../features/search/state/SearchStateService';
 import { SuperpositionData, SearchType, SearchProgressInfo } from '../../features/search/types';
-import { getDefaultStore } from 'jotai';
-import { CurrentSnapshotAtom } from '../../features/mvs/atoms';
+import { molstarStateService } from '../../features/mvs/services/MolstarStateService';
 
 // Global state interface that combines all feature states
 export interface GlobalState {
@@ -36,7 +35,6 @@ const initialState: GlobalState = {
 class GlobalStateService {
   private static instance: GlobalStateService;
   private state$ = new BehaviorSubject<GlobalState>(initialState);
-  private store = getDefaultStore();
 
   private constructor() {
     // Private constructor to prevent direct construction calls with 'new'
@@ -91,7 +89,8 @@ class GlobalStateService {
   // Search State Actions
   setSearchResults(results: SuperpositionData[]) {
     this.debug('setSearchResults', { resultsCount: results.length });
-    this.state$.next({
+    
+    const nextState = {
       ...this.state$.value,
       search: {
         ...this.state$.value.search,
@@ -99,7 +98,12 @@ class GlobalStateService {
         isSearching: false,
         progress: null
       }
-    });
+    };
+    
+    this.state$.next(nextState);
+
+    // Update Molstar state with new results
+    molstarStateService.updateFromSearchResults(nextState.search.query, results);
   }
 
   setSearchQuery(query: string, searchType: SearchType) {
@@ -119,7 +123,7 @@ class GlobalStateService {
 
   setValidationError(error: string | null) {
     this.debug('setValidationError', { error });
-    this.state$.next({
+    const nextState = {
       ...this.state$.value,
       search: {
         ...this.state$.value.search,
@@ -128,7 +132,13 @@ class GlobalStateService {
         progress: error ? null : this.state$.value.search.progress,
         selectedResult: error ? null : this.state$.value.search.selectedResult
       }
-    });
+    };
+    
+    this.state$.next(nextState);
+
+    if (error) {
+      molstarStateService.clear();
+    }
   }
 
   setSearchProgress(progress: SearchProgressInfo | null) {
@@ -154,11 +164,11 @@ class GlobalStateService {
       }
     });
 
-    // Update the current snapshot in Jotai state
+    // Update Molstar state
     if (result) {
-      this.store.set(CurrentSnapshotAtom, `scene_${result.object_id}`);
+      molstarStateService.setCurrentSceneKey(`scene_${result.object_id}`);
     } else {
-      this.store.set(CurrentSnapshotAtom, null);
+      molstarStateService.setCurrentSceneKey(null);
     }
   }
 
@@ -168,7 +178,7 @@ class GlobalStateService {
       ...this.state$.value,
       search: initialState.search
     });
-    this.store.set(CurrentSnapshotAtom, null);
+    molstarStateService.clear();
   }
 
   // Debug Actions

@@ -1,13 +1,10 @@
 import React, { useEffect } from 'react';
-import { useSearchState } from '../../lib/hooks/use-global-state';
 import { MolstarContainer } from './MolstarContainer';
-import { createMultiSceneStory } from './examples/superposition';
+import { molstarStateService } from './services/MolstarStateService';
+import { useObservable } from '../../lib/hooks/use-observable';
 
 export function MVSWrapper() {
-    const searchState = useSearchState();
-    const story = searchState?.query && searchState?.results.length > 0
-        ? createMultiSceneStory(searchState.query, searchState.results)
-        : null;
+    const story = useObservable(molstarStateService.getStory$(), null);
 
     // Debug state changes
     useEffect(() => {

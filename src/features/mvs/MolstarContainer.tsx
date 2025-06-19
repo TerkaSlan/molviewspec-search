@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { atom, useAtomValue, useStore, useSetAtom } from 'jotai';
 import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
 import { PluginSpec } from 'molstar/lib/mol-plugin/spec';
@@ -8,15 +7,17 @@ import { PluginConfig } from 'molstar/lib/mol-plugin/config';
 import { loadMVSData } from 'molstar/lib/extensions/mvs/components/formats';
 import { Scheduler } from 'molstar/lib/mol-task';
 import { SingleTaskQueue } from '../../utils';
-import { StoryAtom, ActiveSceneAtom, ActiveSceneIdAtom, CurrentViewAtom, CurrentSnapshotAtom } from './atoms';
-import { Story, SceneData } from '../types';
+import { Story } from '../types';
 import { getMVSData, getMVSSnapshot } from './actions';
 import { MolstarViewer } from './ui/MolstarViewer';
 import { PluginCommands } from 'molstar/lib/mol-plugin/commands';
-import { Subscription, Subject } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { filter, debounceTime } from 'rxjs/operators';
 import { MVSData, Snapshot } from 'molstar/lib/extensions/mvs/mvs-data';
-
+import { molstarStateService } from './services/MolstarStateService';
+import { useObservable } from '../../lib/hooks/use-observable';
+import { globalStateService } from '../../lib/state/GlobalStateService';
+import { SuperpositionData } from '../search/types';
 
 interface MolstarContainerProps {
     story: Story | null;
@@ -48,10 +49,8 @@ function createViewer() {
 }
 
 // Custom hook for managing Molstar state
-function useMolstarState(plugin: PluginUIContext, store: ReturnType<typeof useStore>) {
+function useMolstarState(plugin: PluginUIContext, story: Story | null) {
     useEffect(() => {
-        const stateUpdates$ = new Subject<{ type: 'snapshot'; key: string | null }>();
-        
         const subscription = plugin.managers.snapshot.events.changed
             .pipe(
                 debounceTime(100), // Debounce rapid updates
@@ -59,35 +58,72 @@ function useMolstarState(plugin: PluginUIContext, store: ReturnType<typeof useSt
             )
             .subscribe(() => {
                 const current = plugin.managers.snapshot.current;
-                stateUpdates$.next({ type: 'snapshot', key: current?.key || null });
+                if (current?.key) {
+                    molstarStateService.setCurrentSceneKey(current.key);
+                    
+                    // Find the corresponding result and update global state
+                    if (story?.scenes) {
+                        const scene = story.scenes.find(scene => scene.key === current.key);
+                        if (scene && 'result' in scene) {
+                            const result = scene.result as SuperpositionData;
+                            if (result) {
+                                globalStateService.setSelectedResult(result);
+                            }
+                        }
+                    }
+                }
             });
 
-        const stateSubscription = stateUpdates$.subscribe(update => {
-            if (update.type === 'snapshot') {
-                store.set(CurrentSnapshotAtom, update.key);
-            }
-        });
+        return () => subscription.unsubscribe();
+    }, [plugin, story]);
 
-        return () => {
-            subscription.unsubscribe();
-            stateSubscription.unsubscribe();
-        };
-    }, [plugin, store]);
+    // Subscribe to scene changes from our state service
+    useEffect(() => {
+        const subscription = molstarStateService.getCurrentSceneKey$()
+            .pipe(filter(key => !!key))
+            .subscribe(async sceneKey => {
+                if (!sceneKey) return;
+                
+                try {
+                    const snapshotManager = plugin.managers.snapshot;
+                    if (!snapshotManager) {
+                        console.error('Snapshot manager not available');
+                        return;
+                    }
+
+                    // Wait for snapshots to be available
+                    const maxAttempts = 5;
+                    const delayMs = 100;
+                    
+                    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                        const entry = snapshotManager.state.entries.find(e => e.key === sceneKey);
+                        if (entry) {
+                            await PluginCommands.State.Snapshots.Apply(plugin, { id: entry.snapshot.id });
+                            return;
+                        }
+                        if (attempt < maxAttempts - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delayMs));
+                        }
+                    }
+                    
+                    console.warn('No snapshot found for scene key:', sceneKey);
+                } catch (error) {
+                    console.error('Error selecting scene:', error);
+                }
+            });
+
+        return () => subscription.unsubscribe();
+    }, [plugin]);
 }
 
 class MolstarViewModel {
     private queue = new SingleTaskQueue();
     readonly plugin: PluginUIContext;
-    private _store: ReturnType<typeof useStore> | undefined = undefined;
     private _isLoading = false;
 
     constructor() {
         this.plugin = createViewer();
         this.init();
-    }
-
-    setStore(store: ReturnType<typeof useStore>) {
-        this._store = store;
     }
 
     private async init() {
@@ -117,23 +153,18 @@ class MolstarViewModel {
                 for (const scene of story.scenes) {
                     const snapshot = await getMVSSnapshot(story, scene);
                     snapshots.push(snapshot);
-                  }
-                  const index: MVSData = {
+                }
+                const index: MVSData = {
                     kind: 'multiple',
                     metadata: {
-                      title: story.metadata.title,
-                      timestamp: new Date().toISOString(),
-                      version: `${MVSData.SupportedVersion}`,
+                        title: story.metadata.title,
+                        timestamp: new Date().toISOString(),
+                        version: `${MVSData.SupportedVersion}`,
                     },
                     snapshots,
-                  };
+                };
 
                 await loadMVSData(this.plugin, index, 'mvsj');
-                
-                // After loading, select the initial scene
-                if (story.scenes.length > 0) {
-                    await this.selectScene(story.scenes[0].key);
-                }
             } catch (error) {
                 console.error('Error loading MVS data into Molstar:', error);
             } finally {
@@ -141,48 +172,13 @@ class MolstarViewModel {
             }
         });
     }
-
-    async selectScene(sceneKey: string) {
-        if (!sceneKey) return;
-        
-        try {
-            const snapshotManager = this.plugin.managers.snapshot;
-            if (!snapshotManager) {
-                console.error('Snapshot manager not available');
-                return;
-            }
-
-            // Wait for snapshots to be available
-            const maxAttempts = 5;
-            const delayMs = 100;
-            
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const entry = snapshotManager.state.entries.find(e => e.key === sceneKey);
-                if (entry) {
-                    await PluginCommands.State.Snapshots.Apply(this.plugin, { id: entry.snapshot.id });
-                    return;
-                }
-                if (attempt < maxAttempts - 1) {
-                    await new Promise(resolve => setTimeout(resolve, delayMs));
-                }
-            }
-            
-            console.warn('No snapshot found for scene key:', sceneKey);
-        } catch (error) {
-            console.error('Error selecting scene:', error);
-        }
-    }
 }
 
 let _modelInstance: MolstarViewModel | null = null;
-const IsLoadingAtom = atom(false);
 
 export function MolstarContainer({ story }: MolstarContainerProps) {
     const modelRef = useRef<MolstarViewModel>();
-    const isLoading = useAtomValue(IsLoadingAtom);
-    const activeSceneId = useAtomValue(ActiveSceneIdAtom);
-    const currentView = useAtomValue(CurrentViewAtom);
-    const store = useStore();
+    const currentSceneKey = useObservable(molstarStateService.getCurrentSceneKey$(), null);
 
     if (!_modelInstance) {
         _modelInstance = new MolstarViewModel();
@@ -193,35 +189,20 @@ export function MolstarContainer({ story }: MolstarContainerProps) {
     }
 
     const model = modelRef.current;
-    const scene = useAtomValue(ActiveSceneAtom);
 
-    // Set up store and state management
-    useEffect(() => {
-        model.setStore(store);
-    }, [store, model]);
-
-    // Set up Molstar state management
-    useMolstarState(model.plugin, store);
+    // Set up state management
+    useMolstarState(model.plugin, story);
 
     // Load story when it changes
     useEffect(() => {
         if (story) {
             model.loadStory(story);
         }
-    }, [model, story]);
-
-    // Scene selection effect - only trigger when we have an explicit scene selection
-    useEffect(() => {
-        if (!scene || !activeSceneId) return;
-        model.selectScene(scene.key);
-    }, [model, scene?.key, activeSceneId]);
+    }, [story]);
 
     return (
-        <div className="relative aspect-square w-full">
-            <MolstarViewer 
-                plugin={model.plugin}
-                isLoading={model.isLoading}
-            />
+        <div className="molstar-viewer">
+            <MolstarViewer plugin={model.plugin} />
         </div>
     );
 } 
