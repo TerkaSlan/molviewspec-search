@@ -4,6 +4,8 @@ import { SearchResultsContainer } from './features/search/SearchResultsContainer
 import { MVSWrapper } from './features/mvs/MVSWrapper';
 import { MetadataContainer } from './features/search/MetadataContainer';
 import { useSearchState } from './lib/hooks/use-global-state';
+import { AppNext } from './features/AppNext';
+import { config } from './lib/config';
 
 /**
  * Main application component
@@ -15,6 +17,11 @@ import { useSearchState } from './lib/hooks/use-global-state';
 const App: React.FC = () => {
   const searchState = useSearchState();
 
+  //if (config.features.useNewStateManagement) {
+  console.log('Using new state management');
+  return <AppNext />;
+
+  /*
   return (
     <div className="app-container">
       <header className="app-header">
@@ -50,7 +57,7 @@ const App: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+  );*/
 };
 
 export default App;
