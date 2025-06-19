@@ -1,36 +1,28 @@
-import { useState } from 'react';
-import { getPdbToUniprotMapping, PDBToUniProtMapping } from '../api';
+import { useCallback } from 'react';
+import { getPdbToUniprotMapping } from '../api';
+import { globalStateService } from '../../../lib/state/GlobalStateService';
+import { useGlobalState } from '../../../lib/hooks/use-global-state';
 
-interface UseMappingResult {
-    mapping: PDBToUniProtMapping | null;
-    isLoading: boolean;
-    error: string | null;
-    getMapping: (pdbId: string) => Promise<void>;
-}
+export function useMapping() {
+    const mappingState = useGlobalState(service => service.getMappingState$());
 
-export function useMapping(): UseMappingResult {
-    const [mapping, setMapping] = useState<PDBToUniProtMapping | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const getMapping = async (pdbId: string) => {
+    const fetchMapping = useCallback(async (pdbId: string) => {
         try {
-            setIsLoading(true);
-            setError(null);
-            const result = await getPdbToUniprotMapping(pdbId);
-            setMapping(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : String(err));
-            setMapping(null);
-        } finally {
-            setIsLoading(false);
+            globalStateService.setMappingLoading(true);
+            const data = await getPdbToUniprotMapping(pdbId);
+            globalStateService.setMappingData(data);
+            return data;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch mapping';
+            globalStateService.setMappingError(errorMessage);
+            throw error;
         }
-    };
+    }, []);
 
     return {
-        mapping,
-        isLoading,
-        error,
-        getMapping
+        mapping: mappingState?.data || null,
+        isLoading: mappingState?.isLoading || false,
+        error: mappingState?.error || null,
+        fetchMapping
     };
 } 

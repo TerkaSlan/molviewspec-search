@@ -45,6 +45,7 @@ export function useSearchViewState() {
   
   return {
     query: searchState?.query || null,
+    searchType: searchState?.searchType || 'alphafind',
     results: searchState?.results || [],
     error: searchState?.validationError,
     progress: searchState?.progress,

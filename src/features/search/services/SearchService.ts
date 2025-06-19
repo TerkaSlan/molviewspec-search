@@ -1,8 +1,9 @@
 import { filter, distinctUntilChanged } from 'rxjs/operators';
 import { globalStateService } from '../../../lib/state/GlobalStateService';
-import { SearchType, SuperpositionData, SearchProgressInfo } from '../types';
+import { SearchType, SuperpositionData } from '../types';
 import { determineInputType, getPdbToUniprotMapping, getUniprotData } from '../../mapping/api';
 import { searchStructures } from '../api';
+import { preloadedResults, defaultQuery } from '../examples/preloaded';
 
 
 class SearchService {
@@ -10,6 +11,13 @@ class SearchService {
     private currentSearch: Promise<void> | null = null;
 
     private constructor() {
+        // Load preloaded results on startup
+        globalStateService.setSearchQuery(defaultQuery, 'alphafind');
+        globalStateService.setSearchResults(preloadedResults.results as SuperpositionData[]);
+        if (preloadedResults.results.length > 0) {
+            globalStateService.setSelectedResult(preloadedResults.results[0] as SuperpositionData);
+        }
+
         // Subscribe to search query changes
         globalStateService.getSearchState$()
             .pipe(

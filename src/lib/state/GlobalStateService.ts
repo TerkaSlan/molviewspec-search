@@ -3,6 +3,7 @@ import { distinctUntilChanged, map } from 'rxjs/operators';
 import { SuperpositionData, SearchType, SearchProgressInfo } from '../../features/search/types';
 import { Story, CurrentView, Scene } from '../../features/types';
 import { molstarStateService } from '../../features/mvs/services/MolstarStateService';
+import { PDBToUniProtMapping } from '../../features/mapping/api';
 
 // Global state interface that combines all feature states
 export interface GlobalState {
@@ -16,6 +17,11 @@ export interface GlobalState {
     progress: SearchProgressInfo | null;
     selectedResult: SuperpositionData | null;
     recentSearches: string[];
+  };
+  mapping: {
+    data: PDBToUniProtMapping | null;
+    isLoading: boolean;
+    error: string | null;
   };
   mvs: {
     story: Story | null;
@@ -41,6 +47,11 @@ const initialState: GlobalState = {
     progress: null,
     selectedResult: null,
     recentSearches: []
+  },
+  mapping: {
+    data: null,
+    isLoading: false,
+    error: null
   },
   mvs: {
     story: null,
@@ -123,6 +134,13 @@ class GlobalStateService {
         if (!state.mvs.activeSceneId) return state.mvs.story.scenes[0];
         return state.mvs.story.scenes.find(scene => scene.id === state.mvs.activeSceneId) || state.mvs.story.scenes[0];
       }),
+      distinctUntilChanged()
+    );
+
+  // Add mapping selectors
+  getMappingState$ = (): Observable<GlobalState['mapping']> =>
+    this.state$.pipe(
+      map(state => state.mapping),
       distinctUntilChanged()
     );
 
@@ -271,6 +289,44 @@ class GlobalStateService {
       mvs: {
         ...this.state$.value.mvs,
         currentSnapshot: snapshot
+      }
+    });
+  }
+
+  // Add mapping actions
+  setMappingData(data: PDBToUniProtMapping | null) {
+    this.debug('setMappingData', { data });
+    this.state$.next({
+      ...this.state$.value,
+      mapping: {
+        ...this.state$.value.mapping,
+        data,
+        isLoading: false,
+        error: null
+      }
+    });
+  }
+
+  setMappingLoading(isLoading: boolean) {
+    this.debug('setMappingLoading', { isLoading });
+    this.state$.next({
+      ...this.state$.value,
+      mapping: {
+        ...this.state$.value.mapping,
+        isLoading
+      }
+    });
+  }
+
+  setMappingError(error: string | null) {
+    this.debug('setMappingError', { error });
+    this.state$.next({
+      ...this.state$.value,
+      mapping: {
+        ...this.state$.value.mapping,
+        error,
+        isLoading: false,
+        data: null
       }
     });
   }

@@ -1,6 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { SearchType } from '../types';
 import { defaultQuery } from '../examples/preloaded';
+import { useSearchViewState } from '../../../lib/hooks/use-global-state';
+import { globalStateService } from '../../../lib/state/GlobalStateService';
 
 interface SearchInputProps {
     value: string;
@@ -17,35 +19,40 @@ export function SearchInput({
     onSearch,
     onClear
 }: SearchInputProps) {
-    const [inputValue, setInputValue] = useState(value);
-    const [searchType, setSearchType] = useState<SearchType>('alphafind');
+    const { query, searchType } = useSearchViewState();
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
-        onSearch(inputValue.trim(), searchType);
-    }, [inputValue, searchType, onSearch]);
+        onSearch(query || defaultQuery, searchType);
+    }, [query, searchType, onSearch]);
 
     const handleClear = useCallback(() => {
-        setInputValue('');
+        globalStateService.clearSearch();
         onClear();
     }, [onClear]);
 
-    const isDefaultQuery = value === defaultQuery;
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        globalStateService.setSearchQuery(e.target.value || defaultQuery, searchType);
+    }, [searchType]);
+
+    const handleSearchTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        globalStateService.setSearchQuery(query || defaultQuery, e.target.value as SearchType);
+    }, [query]);
 
     return (
         <form onSubmit={handleSubmit} className="search-form">
             <div className="search-input-container">
                 <input
                     type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
+                    value={query || defaultQuery}
+                    onChange={handleInputChange}
                     placeholder="Enter PDB ID or UniProt ID"
                     disabled={isLoading}
                     className={`search-input ${error ? 'error' : ''}`}
                 />
                 <select
                     value={searchType}
-                    onChange={(e) => setSearchType(e.target.value as SearchType)}
+                    onChange={handleSearchTypeChange}
                     disabled={isLoading}
                     className="search-type-select"
                 >
@@ -57,7 +64,7 @@ export function SearchInput({
             <div className="search-actions">
                 <button
                     type="submit"
-                    disabled={isLoading || !inputValue.trim()}
+                    disabled={isLoading || !query}
                     className="search-button"
                 >
                     {isLoading ? 'Searching...' : 'Search'}
@@ -65,7 +72,7 @@ export function SearchInput({
                 <button
                     type="button"
                     onClick={handleClear}
-                    disabled={isLoading || !inputValue}
+                    disabled={isLoading || !query}
                     className="clear-button"
                 >
                     Clear

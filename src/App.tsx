@@ -3,6 +3,7 @@ import { SearchContainer } from './features/search/SearchContainer';
 import { SearchResultsContainer } from './features/search/SearchResultsContainer';
 import { MVSWrapper } from './features/mvs/MVSWrapper';
 import { MetadataContainer } from './features/search/MetadataContainer';
+import { useSearchState } from './lib/hooks/use-global-state';
 
 /**
  * Main application component
@@ -12,6 +13,8 @@ import { MetadataContainer } from './features/search/MetadataContainer';
  * @returns {JSX.Element} The main application component
  */
 const App: React.FC = () => {
+  const searchState = useSearchState();
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -28,7 +31,7 @@ const App: React.FC = () => {
           </div>
           
           <div className="panel results-panel">
-            <div className="panel-header">Results</div>
+            <div className="panel-header">Results{searchState?.query ? ` for ${searchState.query}` : ''}</div>
             <div className="panel-content">
               <SearchResultsContainer />
             </div>
