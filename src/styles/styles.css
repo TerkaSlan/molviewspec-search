@@ -642,3 +642,92 @@ button:disabled {
 .metadata-section .value {
     font-family: monospace;
 }
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding: 10px;
+}
+
+.pagination-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.pagination-button:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+.pagination-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 14px;
+    color: #666;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Results Table Styles */
+.results-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0;
+    /* Calculate height: header row + 7 data rows */
+    height: calc(2.5rem + (7 * 3rem));
+}
+
+.results-table thead {
+    background-color: #f8f9fa;
+}
+
+.results-table th {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: bold;
+    color: #495057;
+    height: 2.5rem;
+}
+
+.results-table tbody {
+    /* Set a fixed height for 7 rows */
+    height: calc(7 * 3rem);
+}
+
+.results-table tr {
+    height: 3rem; /* Fixed height for each row */
+}
+
+.results-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+    color: #212529;
+}
+
+/* Add empty row styling */
+.results-table tbody tr.empty-row {
+    height: 3rem;
+    background-color: #ffffff;
+}
+
+.results-table tbody tr.empty-row td {
+    border-bottom: 1px solid #dee2e6;
+}

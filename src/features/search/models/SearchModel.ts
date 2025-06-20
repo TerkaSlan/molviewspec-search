@@ -28,6 +28,10 @@ interface SearchState {
     input: SearchInput;
     status: SearchStatus;
     results: SearchResults;
+    pagination: {
+        currentPage: number;
+        itemsPerPage: number;
+    };
 }
 
 const initialState: SearchState = {
@@ -43,6 +47,10 @@ const initialState: SearchState = {
     results: {
         items: [],
         selectedResult: null
+    },
+    pagination: {
+        currentPage: 1,
+        itemsPerPage: 7
     }
 };
 
@@ -71,7 +79,23 @@ export class SearchModel extends ReactiveModel {
         },
         results: {
             items: () => this.getStateProperty$('results').pipe(map(results => results?.items ?? [])),
-            selectedResult: () => this.getStateProperty$('results').pipe(map(results => results?.selectedResult))
+            selectedResult: () => this.getStateProperty$('results').pipe(map(results => results?.selectedResult)),
+            paginatedItems: () => this.state$.pipe(
+                map(state => {
+                    const { items } = state.results;
+                    const { currentPage, itemsPerPage } = state.pagination;
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const endIndex = startIndex + itemsPerPage;
+                    return items.slice(startIndex, endIndex);
+                })
+            )
+        },
+        pagination: {
+            currentPage: () => this.getStateProperty$('pagination').pipe(map(p => p.currentPage)),
+            totalPages: () => this.state$.pipe(
+                map(state => Math.ceil(state.results.items.length / state.pagination.itemsPerPage))
+            ),
+            itemsPerPage: () => this.getStateProperty$('pagination').pipe(map(p => p.itemsPerPage))
         }
     };
 
@@ -134,6 +158,10 @@ export class SearchModel extends ReactiveModel {
             results: {
                 ...this.state$.value.results,
                 ...results
+            },
+            pagination: {
+                ...this.state$.value.pagination,
+                currentPage: 1 // Reset to first page when new results arrive
             }
         });
     }
@@ -220,7 +248,7 @@ export class SearchModel extends ReactiveModel {
                 // Call the actual search API
                 const response = await searchStructures({
                     query: searchQuery,
-                    limit: 10,
+                    limit: 20,
                     superposition: true
                 });
                 
@@ -259,7 +287,7 @@ export class SearchModel extends ReactiveModel {
                 // For other search types, proceed with direct search
                 const response = await searchStructures({
                     query,
-                    limit: 10,
+                    limit: 20,
                     superposition: true
                 });
                 
@@ -329,6 +357,20 @@ export class SearchModel extends ReactiveModel {
         this.state$.next({
             ...this.state$.value,
             ...newState
+        });
+    }
+
+    // Add pagination actions
+    setPage(page: number) {
+        const totalPages = Math.ceil(this.state$.value.results.items.length / this.state$.value.pagination.itemsPerPage);
+        if (page < 1 || page > totalPages) return;
+
+        this.state$.next({
+            ...this.state$.value,
+            pagination: {
+                ...this.state$.value.pagination,
+                currentPage: page
+            }
         });
     }
 } 

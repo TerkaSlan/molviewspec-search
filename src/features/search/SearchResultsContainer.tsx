@@ -12,7 +12,8 @@ function useSearchState(model: SearchModel) {
         query: useObservable(model.selectors.input.query(), null),
         error: useObservable(model.selectors.search.status(), { isSearching: false, validationError: null })?.validationError,
         isSearching: useObservable(model.selectors.search.status(), { isSearching: false, validationError: null })?.isSearching,
-        selectedResult: useObservable(model.selectors.results.selectedResult(), null)
+        selectedResult: useObservable(model.selectors.results.selectedResult(), null),
+        itemsPerPage: useObservable(model.selectors.pagination.itemsPerPage(), 7)
     };
 }
 
@@ -66,7 +67,7 @@ export function SearchResultsContainer({ model, mvsModel }: SearchResultsContain
         console.groupEnd();
     }, [search, mvs]);
 
-    // Sync MVS scene changes to search model selected result
+    // Sync MVS scene changes to search model selected result and pagination
     useEffect(() => {
         console.log('[SearchResultsContainer] MVS state change effect:', {
             currentScene: mvs.currentScene,
@@ -75,18 +76,33 @@ export function SearchResultsContainer({ model, mvsModel }: SearchResultsContain
             resultsCount: search.results.length
         });
 
-        // If MVS has a selected result, sync it to search
+        // If MVS has a selected result, sync it to search and update pagination
         if (mvs.selectedResult && search.results.length > 0) {
             const result = search.results.find(r => r.object_id === mvs.selectedResult?.object_id);
-            if (result && result.object_id !== search.selectedResult?.object_id) {
-                console.log('[SearchResultsContainer] Syncing MVS selection to search:', {
-                    fromMVS: mvs.selectedResult.object_id,
-                    currentSearch: search.selectedResult?.object_id
-                });
-                model.setSelectedResult(result);
+            if (result) {
+                // Sync selection if needed
+                if (result.object_id !== search.selectedResult?.object_id) {
+                    console.log('[SearchResultsContainer] Syncing MVS selection to search:', {
+                        fromMVS: mvs.selectedResult.object_id,
+                        currentSearch: search.selectedResult?.object_id
+                    });
+                    model.setSelectedResult(result);
+                }
+                
+                // Calculate and set the correct page
+                const resultIndex = search.results.findIndex(r => r.object_id === result.object_id);
+                if (resultIndex !== -1) {
+                    const targetPage = Math.floor(resultIndex / search.itemsPerPage) + 1;
+                    console.log('[SearchResultsContainer] Syncing pagination:', {
+                        resultIndex,
+                        itemsPerPage: search.itemsPerPage,
+                        targetPage
+                    });
+                    model.setPage(targetPage);
+                }
             }
         }
-    }, [mvs.selectedResult, mvs.currentScene, search.results, search.selectedResult, model]);
+    }, [mvs.selectedResult, mvs.currentScene, search.results, search.selectedResult, search.itemsPerPage, model]);
 
     const handleResultClick = useCallback((result: SuperpositionData) => {
         console.log('[SearchResultsContainer] Result clicked:', {
@@ -106,11 +122,12 @@ export function SearchResultsContainer({ model, mvsModel }: SearchResultsContain
         <SearchResults
             results={search.results}
             error={search.error ? { message: search.error } : null}
-            progress={null} // TODO: Add progress tracking to model if needed
+            progress={null}
             isEmpty={!search.query}
             hasResults={search.results.length > 0}
             onResultClick={handleResultClick}
             model={mvsModel}
+            searchModel={model}
         />
     );
 } 
