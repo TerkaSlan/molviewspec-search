@@ -60,7 +60,7 @@ body {
 }
 
 .center-panel {
-  flex: 0 0 75%;
+  flex: 0 0 73.5%;
   position: relative;
 }
 
@@ -91,7 +91,7 @@ body {
 .panel-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 5px;
   overflow: auto;
 }
 
@@ -491,11 +491,12 @@ button:disabled {
 }
 
 .results-table th {
+  padding: 0.5rem 0.75rem;
   text-align: left;
-  padding: 12px 16px;
-  font-weight: 600;
-  border-bottom: 1px solid #eee;
-  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: bold;
+  color: #495057;
+  height: 2rem;
 }
 
 .results-table td {
@@ -690,8 +691,8 @@ button:disabled {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 0;
-    /* Calculate height: header row + 7 data rows */
-    height: calc(2.5rem + (7 * 3rem));
+    /* Calculate height: header row + 5 data rows */
+    height: calc(2.5rem + (5 * 2rem));
 }
 
 .results-table thead {
@@ -708,16 +709,15 @@ button:disabled {
 }
 
 .results-table tbody {
-    /* Set a fixed height for 7 rows */
-    height: calc(7 * 3rem);
+  height: calc(5 * 2.5rem);
 }
 
 .results-table tr {
-    height: 3rem; /* Fixed height for each row */
+    height: 1rem; /* Fixed height for each row */
 }
 
 .results-table td {
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem;
     border-bottom: 1px solid #dee2e6;
     color: #212529;
 }
