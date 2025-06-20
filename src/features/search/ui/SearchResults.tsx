@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { SearchProgressInfo, SuperpositionData } from '../types';
 import { useObservable } from '../../../lib/hooks/use-observable';
 import { MVSModel } from '../../mvs/models/MVSModel';
@@ -38,34 +38,72 @@ interface PaginationProps {
     model: SearchModel;
 }
 
-function Pagination({ model }: PaginationProps) {
-    const currentPage = useObservable(model.selectors.pagination.currentPage(), 1);
-    const totalPages = useObservable(model.selectors.pagination.totalPages(), 1);
+const Pagination = React.memo(function Pagination({ model }: PaginationProps) {
+    const tableData = useObservable(model.selectors.results.tableData(), {
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        items: [],
+        emptyRowsCount: 0
+    });
 
-    if (totalPages <= 1) return null;
+    // Debug state updates
+    React.useEffect(() => {
+        console.log('[Pagination] State Update:', {
+            currentPage: tableData.currentPage,
+            totalPages: tableData.totalPages,
+            totalItems: tableData.totalItems
+        });
+    }, [tableData]);
+
+    const handlePrevPage = useCallback(() => {
+        const newPage = tableData.currentPage - 1;
+        if (newPage >= 1) {
+            console.log('[Pagination] Moving to previous page:', newPage);
+            model.setPage(newPage);
+        }
+    }, [tableData.currentPage, model]);
+
+    const handleNextPage = useCallback(() => {
+        const newPage = tableData.currentPage + 1;
+        if (newPage <= tableData.totalPages) {
+            console.log('[Pagination] Moving to next page:', newPage);
+            model.setPage(newPage);
+        }
+    }, [tableData.currentPage, tableData.totalPages, model]);
+
+    // Don't render if we don't need pagination
+    if (tableData.totalItems <= 5 || tableData.totalPages <= 1) {
+        return null;
+    }
 
     return (
         <div className="pagination">
             <button
-                onClick={() => model.setPage(currentPage - 1)}
-                disabled={currentPage === 1}
+                onClick={handlePrevPage}
+                disabled={tableData.currentPage <= 1}
                 className="pagination-button"
+                type="button"
             >
                 Previous
             </button>
             <span className="pagination-info">
-                Page {currentPage} of {totalPages}
+                Page {tableData.currentPage} of {tableData.totalPages}
             </span>
             <button
-                onClick={() => model.setPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                onClick={handleNextPage}
+                disabled={tableData.currentPage >= tableData.totalPages}
                 className="pagination-button"
+                type="button"
             >
                 Next
             </button>
         </div>
     );
-}
+}, (prevProps, nextProps) => {
+    // Implement custom comparison for memo
+    return prevProps.model === nextProps.model;
+});
 
 interface ResultsTableProps {
     results: SuperpositionData[];
@@ -74,26 +112,44 @@ interface ResultsTableProps {
     searchModel: SearchModel;
 }
 
-function ResultsTable({ results, onResultClick, model, searchModel }: ResultsTableProps) {
-    // Subscribe to both scene and selection changes from the MVS model
+const ResultsTable = React.memo(function ResultsTable({ onResultClick, model, searchModel }: ResultsTableProps) {
     const currentSceneKey = useObservable(model.selectors.story.currentScene(), null);
     const selectedResult = useObservable(model.selectors.viewer.selectedResult(), null);
-    const paginatedResults = useObservable(searchModel.selectors.results.paginatedItems(), []);
-    const itemsPerPage = useObservable(searchModel.selectors.pagination.itemsPerPage(), 7);
-    
-    // Calculate number of empty rows needed
-    const emptyRowsCount = Math.max(0, itemsPerPage - paginatedResults.length);
-    
-    // Debug state in ResultsTable
-    React.useEffect(() => {
-        console.log('[ResultsTable] MVS Model State Update:', {
-            currentSceneKey,
-            selectedResultId: selectedResult?.object_id,
-            resultIds: results.map(r => r.object_id),
-            modelInstance: model,
-            emptyRowsCount
+    const tableData = useObservable(searchModel.selectors.results.tableData(), {
+        items: [],
+        emptyRowsCount: 0,
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0
+    });
+
+    const tableRows = useMemo(() => {
+        return tableData.items.map((result) => {
+            const sceneKey = `scene_${result.object_id}`;
+            const isActive = currentSceneKey === sceneKey || selectedResult?.object_id === result.object_id;
+            
+            return (
+                <tr
+                    key={result.object_id}
+                    className={`result-row ${isActive ? 'active' : ''}`}
+                    onClick={() => onResultClick(result)}
+                >
+                    <td className="protein-id">{result.object_id}</td>
+                    <td className="tm-score">{result.tm_score.toFixed(3)}</td>
+                    <td className="rmsd">{result.rmsd.toFixed(3)}</td>
+                    <td className="aligned">{(result.aligned_percentage * 100).toFixed(1)}%</td>
+                </tr>
+            );
         });
-    }, [currentSceneKey, selectedResult, results, model, emptyRowsCount]);
+    }, [tableData.items, currentSceneKey, selectedResult, onResultClick]);
+
+    const emptyRows = useMemo(() => {
+        return Array.from({ length: tableData.emptyRowsCount }).map((_, index) => (
+            <tr key={`empty-${index}`} className="empty-row">
+                <td colSpan={4}></td>
+            </tr>
+        ));
+    }, [tableData.emptyRowsCount]);
     
     return (
         <div className="results-container">
@@ -107,35 +163,14 @@ function ResultsTable({ results, onResultClick, model, searchModel }: ResultsTab
                     </tr>
                 </thead>
                 <tbody>
-                    {paginatedResults.map((result) => {
-                        const sceneKey = `scene_${result.object_id}`;
-                        const isActive = currentSceneKey === sceneKey || selectedResult?.object_id === result.object_id;
-                        
-                        return (
-                            <tr
-                                key={result.object_id}
-                                className={`result-row ${isActive ? 'active' : ''}`}
-                                onClick={() => onResultClick(result)}
-                            >
-                                <td className="protein-id">{result.object_id}</td>
-                                <td className="tm-score">{result.tm_score.toFixed(3)}</td>
-                                <td className="rmsd">{result.rmsd.toFixed(3)}</td>
-                                <td className="aligned">{(result.aligned_percentage * 100).toFixed(1)}%</td>
-                            </tr>
-                        );
-                    })}
-                    {/* Add empty rows to maintain consistent height */}
-                    {Array.from({ length: emptyRowsCount }).map((_, index) => (
-                        <tr key={`empty-${index}`} className="empty-row">
-                            <td colSpan={4}></td>
-                        </tr>
-                    ))}
+                    {tableRows}
+                    {emptyRows}
                 </tbody>
             </table>
             <Pagination model={searchModel} />
         </div>
     );
-}
+});
 
 interface SearchResultsProps {
     results: SuperpositionData[];
@@ -148,7 +183,7 @@ interface SearchResultsProps {
     searchModel: SearchModel;
 }
 
-export function SearchResults({
+export const SearchResults = React.memo(function SearchResults({
     results,
     error,
     progress,
@@ -168,4 +203,4 @@ export function SearchResults({
             {hasResults && <ResultsTable results={results} onResultClick={onResultClick} model={model} searchModel={searchModel} />}
         </div>
     );
-} 
+}); 

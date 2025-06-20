@@ -1,6 +1,6 @@
 import { BehaviorSubject, Observable } from 'rxjs';
 import { ReactiveModel } from '../../../lib/reactive-model';
-import { map, distinctUntilChanged } from 'rxjs/operators';
+import { map, distinctUntilChanged, shareReplay } from 'rxjs/operators';
 import { SearchType, SuperpositionData } from '../types';
 import { searchStructures } from '../api';
 import { determineInputType, validatePdbId, validateUniprotId, getPdbToUniprotMapping } from '../../mapping/api';
@@ -32,6 +32,7 @@ interface SearchState {
         currentPage: number;
         itemsPerPage: number;
     };
+    lastProcessedMVSResult: string | null;
 }
 
 const initialState: SearchState = {
@@ -50,12 +51,59 @@ const initialState: SearchState = {
     },
     pagination: {
         currentPage: 1,
-        itemsPerPage: 7
-    }
+        itemsPerPage: 5
+    },
+    lastProcessedMVSResult: null
 };
+
+// Add a helper function for deep comparison
+function deepEqual(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (typeof a !== 'object' || typeof b !== 'object') return false;
+    if (a === null || b === null) return false;
+    
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    
+    if (keysA.length !== keysB.length) return false;
+    
+    return keysA.every(key => deepEqual(a[key], b[key]));
+}
 
 export class SearchModel extends ReactiveModel {
     private state$ = new BehaviorSubject<SearchState>(initialState);
+
+    // Create a shared, cached tableData$ observable
+    private tableData$ = this.state$.pipe(
+        map(state => {
+            const { items } = state.results;
+            const { currentPage, itemsPerPage } = state.pagination;
+            
+            // Calculate paginated data
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedItems = items.slice(startIndex, endIndex);
+            
+            // Calculate empty rows needed
+            const emptyRowsCount = Math.max(0, itemsPerPage - paginatedItems.length);
+            
+            return {
+                items: paginatedItems,
+                emptyRowsCount,
+                totalPages: Math.ceil(items.length / itemsPerPage),
+                currentPage,
+                totalItems: items.length
+            };
+        }),
+        distinctUntilChanged((prev, curr) => 
+            prev.currentPage === curr.currentPage &&
+            prev.totalPages === curr.totalPages &&
+            prev.totalItems === curr.totalItems &&
+            prev.emptyRowsCount === curr.emptyRowsCount &&
+            deepEqual(prev.items, curr.items)
+        ),
+        shareReplay(1)
+    );
 
     // Generic state selector
     getStateProperty$<K extends keyof SearchState>(property: K): Observable<SearchState[K]> {
@@ -70,32 +118,48 @@ export class SearchModel extends ReactiveModel {
         search: {
             status: () => this.getStateProperty$('status'),
             input: () => this.getStateProperty$('input'),
-            results: () => this.getStateProperty$('results')
+            results: () => this.getStateProperty$('results'),
+            lastProcessedMVSResult: () => this.getStateProperty$('lastProcessedMVSResult')
         },
         input: {
-            query: () => this.getStateProperty$('input').pipe(map(input => input.query)),
-            searchType: () => this.getStateProperty$('input').pipe(map(input => input.searchType)),
-            pdbMapping: () => this.getStateProperty$('input').pipe(map(input => input.pdbMapping))
+            query: () => this.getStateProperty$('input').pipe(
+                map(input => input.query),
+                distinctUntilChanged()
+            ),
+            searchType: () => this.getStateProperty$('input').pipe(
+                map(input => input.searchType),
+                distinctUntilChanged()
+            ),
+            pdbMapping: () => this.getStateProperty$('input').pipe(
+                map(input => input.pdbMapping),
+                distinctUntilChanged((prev, curr) => deepEqual(prev, curr))
+            )
         },
         results: {
-            items: () => this.getStateProperty$('results').pipe(map(results => results?.items ?? [])),
-            selectedResult: () => this.getStateProperty$('results').pipe(map(results => results?.selectedResult)),
-            paginatedItems: () => this.state$.pipe(
-                map(state => {
-                    const { items } = state.results;
-                    const { currentPage, itemsPerPage } = state.pagination;
-                    const startIndex = (currentPage - 1) * itemsPerPage;
-                    const endIndex = startIndex + itemsPerPage;
-                    return items.slice(startIndex, endIndex);
-                })
+            items: () => this.getStateProperty$('results').pipe(
+                map(results => results?.items ?? []),
+                distinctUntilChanged((prev, curr) => deepEqual(prev, curr))
+            ),
+            selectedResult: () => this.getStateProperty$('results').pipe(
+                map(results => results?.selectedResult),
+                distinctUntilChanged((prev, curr) => deepEqual(prev, curr))
+            ),
+            tableData: () => this.tableData$,
+            paginatedItems: () => this.tableData$.pipe(
+                map(data => data.items)
             )
         },
         pagination: {
-            currentPage: () => this.getStateProperty$('pagination').pipe(map(p => p.currentPage)),
-            totalPages: () => this.state$.pipe(
-                map(state => Math.ceil(state.results.items.length / state.pagination.itemsPerPage))
+            currentPage: () => this.tableData$.pipe(
+                map(data => data.currentPage)
             ),
-            itemsPerPage: () => this.getStateProperty$('pagination').pipe(map(p => p.itemsPerPage))
+            totalPages: () => this.tableData$.pipe(
+                map(data => data.totalPages)
+            ),
+            itemsPerPage: () => this.getStateProperty$('pagination').pipe(
+                map(p => p.itemsPerPage),
+                distinctUntilChanged()
+            )
         }
     };
 
@@ -168,7 +232,14 @@ export class SearchModel extends ReactiveModel {
 
     // Specific actions (using the new grouped setters)
     setSelectedResult(result: SuperpositionData | null) {
-        this.setSearchResults({ selectedResult: result });
+        this.state$.next({
+            ...this.state$.value,
+            results: {
+                ...this.state$.value.results,
+                selectedResult: result
+            },
+            lastProcessedMVSResult: result?.object_id ?? null
+        });
     }
 
     setValidationError(error: string | null) {
@@ -371,6 +442,14 @@ export class SearchModel extends ReactiveModel {
                 ...this.state$.value.pagination,
                 currentPage: page
             }
+        });
+    }
+
+    // Add method to update lastProcessedMVSResult
+    setLastProcessedMVSResult(resultId: string | null) {
+        this.state$.next({
+            ...this.state$.value,
+            lastProcessedMVSResult: resultId
         });
     }
 } 
