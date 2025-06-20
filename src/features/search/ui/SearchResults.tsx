@@ -1,7 +1,7 @@
 import React from 'react';
 import { SearchProgressInfo, SuperpositionData } from '../types';
 import { useObservable } from '../../../lib/hooks/use-observable';
-import { molstarStateService } from '../../mvs/services/MolstarStateService';
+import { MVSModel } from '../../mvs/models/MVSModel';
 
 interface SearchProgressProps {
     progress: SearchProgressInfo | null;
@@ -36,10 +36,23 @@ function SearchProgress({ progress }: SearchProgressProps) {
 interface ResultsTableProps {
     results: SuperpositionData[];
     onResultClick: (result: SuperpositionData) => void;
+    model: MVSModel;
 }
 
-function ResultsTable({ results, onResultClick }: ResultsTableProps) {
-    const currentSceneKey = useObservable(molstarStateService.getCurrentSceneKey$(), null);
+function ResultsTable({ results, onResultClick, model }: ResultsTableProps) {
+    // Subscribe to both scene and selection changes from the MVS model
+    const currentSceneKey = useObservable(model.selectors.story.currentScene(), null);
+    const selectedResult = useObservable(model.selectors.viewer.selectedResult(), null);
+    
+    // Debug state in ResultsTable
+    React.useEffect(() => {
+        console.log('[ResultsTable] MVS Model State Update:', {
+            currentSceneKey,
+            selectedResultId: selectedResult?.object_id,
+            resultIds: results.map(r => r.object_id),
+            modelInstance: model
+        });
+    }, [currentSceneKey, selectedResult, results, model]);
     
     return (
         <div className="results-container">
@@ -55,7 +68,21 @@ function ResultsTable({ results, onResultClick }: ResultsTableProps) {
                 <tbody>
                     {results.map((result) => {
                         const sceneKey = `scene_${result.object_id}`;
-                        const isActive = currentSceneKey === sceneKey;
+                        // Check both scene key and selected result for active state
+                        const isActive = currentSceneKey === sceneKey || selectedResult?.object_id === result.object_id;
+                        
+                        // Debug row state
+                        console.log('[ResultsTable] Row State:', {
+                            id: result.object_id,
+                            sceneKey,
+                            currentSceneKey,
+                            selectedResultId: selectedResult?.object_id,
+                            isActive,
+                            matches: {
+                                scene: currentSceneKey === sceneKey,
+                                selected: selectedResult?.object_id === result.object_id
+                            }
+                        });
                         
                         return (
                             <tr
@@ -83,6 +110,7 @@ interface SearchResultsProps {
     isEmpty: boolean;
     hasResults: boolean;
     onResultClick: (result: SuperpositionData) => void;
+    model: MVSModel;
 }
 
 export function SearchResults({
@@ -91,7 +119,8 @@ export function SearchResults({
     progress,
     isEmpty,
     hasResults,
-    onResultClick
+    onResultClick,
+    model
 }: SearchResultsProps) {
     if (isEmpty) {
         return null;
@@ -100,7 +129,7 @@ export function SearchResults({
     return (
         <div className="search-results">
             <SearchProgress progress={progress} />
-            {hasResults && <ResultsTable results={results} onResultClick={onResultClick} />}
+            {hasResults && <ResultsTable results={results} onResultClick={onResultClick} model={model} />}
         </div>
     );
 } 

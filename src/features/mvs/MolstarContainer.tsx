@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
 import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
 import { PluginSpec } from 'molstar/lib/mol-plugin/spec';
@@ -8,19 +8,18 @@ import { loadMVSData } from 'molstar/lib/extensions/mvs/components/formats';
 import { Scheduler } from 'molstar/lib/mol-task';
 import { SingleTaskQueue } from '../../utils';
 import { Story } from '../types';
-import { getMVSData, getMVSSnapshot } from './actions';
+import {  getMVSSnapshot } from './actions';
 import { MolstarViewer } from './ui/MolstarViewer';
 import { PluginCommands } from 'molstar/lib/mol-plugin/commands';
-import { Subscription } from 'rxjs';
 import { filter, debounceTime } from 'rxjs/operators';
 import { MVSData, Snapshot } from 'molstar/lib/extensions/mvs/mvs-data';
-import { molstarStateService } from './services/MolstarStateService';
 import { useObservable } from '../../lib/hooks/use-observable';
-import { globalStateService } from '../../lib/state/GlobalStateService';
 import { SuperpositionData } from '../search/types';
+import { MVSModel } from './models/MVSModel';
 
 interface MolstarContainerProps {
     story: Story | null;
+    model: MVSModel;
 }
 
 // Separate concerns: Plugin creation
@@ -49,7 +48,7 @@ function createViewer() {
 }
 
 // Custom hook for managing Molstar state
-function useMolstarState(plugin: PluginUIContext, story: Story | null) {
+function useMolstarState(plugin: PluginUIContext, story: Story | null, model: MVSModel) {
     useEffect(() => {
         const subscription = plugin.managers.snapshot.events.changed
             .pipe(
@@ -59,15 +58,15 @@ function useMolstarState(plugin: PluginUIContext, story: Story | null) {
             .subscribe(() => {
                 const current = plugin.managers.snapshot.current;
                 if (current?.key) {
-                    molstarStateService.setCurrentSceneKey(current.key);
+                    model.setCurrentSceneKey(current.key);
                     
-                    // Find the corresponding result and update global state
+                    // Find the corresponding result and update state
                     if (story?.scenes) {
                         const scene = story.scenes.find(scene => scene.key === current.key);
                         if (scene && 'result' in scene) {
                             const result = scene.result as SuperpositionData;
                             if (result) {
-                                globalStateService.setSelectedResult(result);
+                                model.setSelectedResult(result);
                             }
                         }
                     }
@@ -75,15 +74,13 @@ function useMolstarState(plugin: PluginUIContext, story: Story | null) {
             });
 
         return () => subscription.unsubscribe();
-    }, [plugin, story]);
+    }, [plugin, story, model]);
 
-    // Subscribe to scene changes from our state service
+    // Subscribe to scene changes from our model
     useEffect(() => {
-        const subscription = molstarStateService.getCurrentSceneKey$()
-            .pipe(filter(key => !!key))
-            .subscribe(async sceneKey => {
-                if (!sceneKey) return;
-                
+        const subscription = model.selectors.story.currentScene()
+            .pipe(filter((key): key is string => key !== null))
+            .subscribe(async (sceneKey: string) => {
                 try {
                     const snapshotManager = plugin.managers.snapshot;
                     if (!snapshotManager) {
@@ -113,7 +110,7 @@ function useMolstarState(plugin: PluginUIContext, story: Story | null) {
             });
 
         return () => subscription.unsubscribe();
-    }, [plugin]);
+    }, [plugin, model]);
 }
 
 class MolstarViewModel {
@@ -187,10 +184,10 @@ class MolstarViewModel {
 
 let _modelInstance: MolstarViewModel | null = null;
 
-export function MolstarContainer({ story }: MolstarContainerProps) {
+export function MolstarContainer({ story, model }: MolstarContainerProps) {
     const modelRef = useRef<MolstarViewModel>();
-    const currentSceneKey = useObservable(molstarStateService.getCurrentSceneKey$(), null);
-    const shouldClearPlugin = useObservable(molstarStateService.getShouldClearPlugin$(), false);
+    //const currentSceneKey = useObservable(model.getCurrentSceneKey$(), null);
+    const shouldClearPlugin = useObservable(model.selectors.viewer.shouldClearPlugin(), false);
 
     if (!_modelInstance) {
         _modelInstance = new MolstarViewModel();
@@ -200,30 +197,30 @@ export function MolstarContainer({ story }: MolstarContainerProps) {
         modelRef.current = _modelInstance;
     }
 
-    const model = modelRef.current;
+    const viewModel = modelRef.current;
 
     // Set up state management
-    useMolstarState(model.plugin, story);
+    useMolstarState(viewModel.plugin, story, model);
 
     // Handle plugin clearing
     useEffect(() => {
-        if (shouldClearPlugin && model) {
-            model.clear().then(() => {
-                molstarStateService.clearPluginComplete();
+        if (shouldClearPlugin && viewModel) {
+            viewModel.clear().then(() => {
+                model.clearPluginComplete();
             });
         }
-    }, [shouldClearPlugin, model]);
+    }, [shouldClearPlugin, viewModel, model]);
 
     // Load story when it changes
     useEffect(() => {
         if (story) {
-            model.loadStory(story);
+            viewModel.loadStory(story);
         }
-    }, [story]);
+    }, [story, viewModel]);
 
     return (
         <div className="molstar-viewer">
-            <MolstarViewer plugin={model.plugin} />
+            <MolstarViewer plugin={viewModel.plugin} />
         </div>
     );
 } 

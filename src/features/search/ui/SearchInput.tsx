@@ -1,59 +1,66 @@
 import React, { useCallback } from 'react';
 import { SearchType } from '../types';
 import { defaultQuery } from '../examples/preloaded';
-import { useSearchViewState } from '../../../lib/hooks/use-global-state';
-import { globalStateService } from '../../../lib/state/GlobalStateService';
+import { SearchModel } from '../models/SearchModel';
 
 interface SearchInputProps {
     value: string;
+    searchType: SearchType;
     isLoading: boolean;
     error: string | null;
     onSearch: (value: string, searchType: SearchType) => void;
     onClear: () => void;
+    model: SearchModel;
 }
 
 export function SearchInput({
     value,
+    searchType,
     isLoading,
     error,
     onSearch,
-    onClear
+    onClear,
+    model
 }: SearchInputProps) {
-    const { query, searchType } = useSearchViewState();
-
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
-        onSearch(query || defaultQuery, searchType);
-    }, [query, searchType, onSearch]);
+        onSearch(value || defaultQuery, searchType);
+    }, [value, searchType, onSearch]);
 
     const handleClear = useCallback(() => {
-        globalStateService.clearSearch();
+        model.clearSearch();
         onClear();
-    }, [onClear]);
+    }, [model, onClear]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         // Only clear validation error when input changes
         if (error) {
-            globalStateService.setValidationError(null);
+            model.setValidationError(null);
         }
-        globalStateService.setSearchQuery(value || defaultQuery, searchType);
-    }, [searchType, error]);
+        model.setSearchInput({ 
+            query: value || defaultQuery,
+            searchType 
+        });
+    }, [model, searchType, error]);
 
     const handleSearchTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-        globalStateService.setSearchQuery(query || defaultQuery, e.target.value as SearchType);
-    }, [query]);
+        model.setSearchInput({
+            query: value || defaultQuery,
+            searchType: e.target.value as SearchType
+        });
+    }, [model, value]);
 
     return (
         <form onSubmit={handleSubmit} className="search-form">
             <div className="search-input-container">
                 <input
                     type="text"
-                    value={query || defaultQuery}
+                    value={value}
                     onChange={handleInputChange}
                     placeholder="Enter PDB ID or UniProt ID"
                     disabled={isLoading}
-                    className={`search-input ${error ? 'error' : ''}`}
+                    className={`search-input ${error ? 'error' : ''} ${value === defaultQuery ? 'default-query' : ''}`}
                 />
                 <select
                     value={searchType}
@@ -69,7 +76,7 @@ export function SearchInput({
             <div className="search-actions">
                 <button
                     type="submit"
-                    disabled={isLoading || !query || error !== null}
+                    disabled={isLoading || !value || error !== null}
                     className="search-button"
                 >
                     {isLoading ? 'Searching...' : 'Search'}
@@ -77,7 +84,7 @@ export function SearchInput({
                 <button
                     type="button"
                     onClick={handleClear}
-                    disabled={isLoading || !query}
+                    disabled={isLoading || !value}
                     className="clear-button"
                 >
                     Clear

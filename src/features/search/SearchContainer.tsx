@@ -1,37 +1,52 @@
 import React, { useCallback } from 'react';
 import { SearchInput } from './ui/SearchInput';
-import { useSearchViewState } from '../../lib/hooks/use-global-state';
-import { globalStateService } from '../../lib/state/GlobalStateService';
+import { useReactiveModel } from '../../lib/hooks/use-reactive-model';
+import { useObservable } from '../../lib/hooks/use-observable';
+import { SearchModel } from './models/SearchModel';
 import { SearchType } from './types';
 
-export function SearchContainer() {
-  const {
-    query,
-    isValidating,
-    isSearching,
-    error
-  } = useSearchViewState();
+interface SearchContainerProps {
+    model: SearchModel;
+}
 
-  const handleSearch = useCallback(async (inputValue: string, searchType: SearchType) => {
-    try {
-      // Only update the search query state - the service will handle the actual search
-      globalStateService.setSearchQuery(inputValue, searchType);
-    } catch (error) {
-      globalStateService.setValidationError(error instanceof Error ? error.message : 'An error occurred');
-    }
-  }, []);
+export function SearchContainer({ model }: SearchContainerProps) {
+    // Connect the model to React's lifecycle
+    useReactiveModel(model);
 
-  const handleClear = useCallback(() => {
-    globalStateService.clearSearch();
-  }, []);
+    // Subscribe to grouped state
+    const { query, searchType } = useObservable(model.selectors.search.input(), {
+        query: null,
+        searchType: 'alphafind' as SearchType
+    });
+    const { isSearching, validationError } = useObservable(model.selectors.search.status(), {
+        isSearching: false,
+        validationError: null
+    });
 
-  return (
-    <SearchInput
-      value={query || ''}
-      isLoading={isValidating || isSearching}
-      error={error ?? null}
-      onSearch={handleSearch}
-      onClear={handleClear}
-    />
-  );
+    const handleSearch = useCallback(async (inputValue: string, searchType: SearchType) => {
+        try {
+            console.log('[SearchContainer] Triggering search:', { inputValue, searchType });
+            await model.triggerSearch(inputValue, searchType);
+        } catch (error) {
+            console.error('[SearchContainer] Search error:', error);
+            model.setValidationError(error instanceof Error ? error.message : 'An error occurred');
+        }
+    }, [model]);
+
+    const handleClear = useCallback(() => {
+        console.log('[SearchContainer] Clearing search');
+        model.clearSearch();
+    }, [model]);
+
+    return (
+        <SearchInput
+            value={query || ''}
+            searchType={searchType}
+            isLoading={isSearching}
+            error={validationError}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            model={model}
+        />
+    );
 } 

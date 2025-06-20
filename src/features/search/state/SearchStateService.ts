@@ -1,5 +1,5 @@
 import { BehaviorSubject, Subject, Observable } from 'rxjs';
-import { map, shareReplay, distinctUntilChanged, filter } from 'rxjs/operators';
+import { map, distinctUntilChanged } from 'rxjs/operators';
 import { SuperpositionData, SearchType, SearchProgressInfo } from '../types';
 
 export interface SearchState {
