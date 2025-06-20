@@ -2,6 +2,8 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { ReactiveModel } from '../../../lib/reactive-model';
 import { map, distinctUntilChanged } from 'rxjs/operators';
 import { SearchType, SuperpositionData } from '../types';
+import { searchStructures } from '../api';
+import { determineInputType, validatePdbId, validateUniprotId, getPdbToUniprotMapping } from '../../mapping/api';
 
 interface SearchStatus {
     isSearching: boolean;
@@ -11,6 +13,10 @@ interface SearchStatus {
 interface SearchInput {
     query: string | null;
     searchType: SearchType;
+    pdbMapping: {
+        pdbId: string;
+        uniprotId: string;
+    } | null;
 }
 
 interface SearchResults {
@@ -27,7 +33,8 @@ interface SearchState {
 const initialState: SearchState = {
     input: {
         query: null,
-        searchType: 'alphafind'
+        searchType: 'alphafind',
+        pdbMapping: null
     },
     status: {
         isSearching: false,
@@ -59,7 +66,8 @@ export class SearchModel extends ReactiveModel {
         },
         input: {
             query: () => this.getStateProperty$('input').pipe(map(input => input.query)),
-            searchType: () => this.getStateProperty$('input').pipe(map(input => input.searchType))
+            searchType: () => this.getStateProperty$('input').pipe(map(input => input.searchType)),
+            pdbMapping: () => this.getStateProperty$('input').pipe(map(input => input.pdbMapping))
         },
         results: {
             items: () => this.getStateProperty$('results').pipe(map(results => results?.items ?? [])),
@@ -92,6 +100,11 @@ export class SearchModel extends ReactiveModel {
 
     getSelectedResult$() {
         return this.state$.pipe(map(state => state.results.selectedResult));
+    }
+
+    // Add a new selector for PDB mapping
+    getPdbMapping$() {
+        return this.state$.pipe(map(state => state.input.pdbMapping));
     }
 
     // Actions
@@ -135,31 +148,162 @@ export class SearchModel extends ReactiveModel {
     }
 
     async triggerSearch(query: string, searchType: SearchType) {
-        // Update input state
-        this.setSearchInput({ query, searchType });
-        
-        // Update status
-        this.setSearchStatus({ 
-            isSearching: true,
-            validationError: null
+        // Clear results and set searching state immediately
+        this.state$.next({
+            ...this.state$.value,
+            input: {
+                ...this.state$.value.input,
+                query,
+                searchType,
+                pdbMapping: null // Reset mapping
+            },
+            results: {
+                items: [],
+                selectedResult: null
+            },
+            status: {
+                isSearching: true,
+                validationError: null
+            }
         });
 
         try {
-            // TODO: Implement actual search logic
-            const results: SuperpositionData[] = [];
-            
-            // Update results
-            this.setSearchResults({ 
-                items: results,
-                selectedResult: null
-            });
+            if (searchType === 'alphafind') {
+                // First determine input type
+                const inputType = await determineInputType(query);
+                
+                if (inputType === 'invalid') {
+                    // Keep results cleared and set error
+                    this.state$.next({
+                        ...this.state$.value,
+                        results: {
+                            items: [],
+                            selectedResult: null
+                        },
+                        status: {
+                            isSearching: false,
+                            validationError: 'Invalid input: Not a valid PDB ID or UniProt ID'
+                        }
+                    });
+                    return;
+                }
+
+                let searchQuery = query;
+                let pdbMapping = null;
+                
+                if (inputType === 'pdb') {
+                    // If it's a PDB ID, get UniProt mapping
+                    const mapping = await getPdbToUniprotMapping(query);
+                    if (mapping.uniprotIds.length === 0) {
+                        // Keep results cleared and set error
+                        this.state$.next({
+                            ...this.state$.value,
+                            results: {
+                                items: [],
+                                selectedResult: null
+                            },
+                            status: {
+                                isSearching: false,
+                                validationError: `No UniProt mapping found for PDB ID ${query}`
+                            }
+                        });
+                        return;
+                    }
+                    // Use the first UniProt ID for search
+                    searchQuery = mapping.uniprotIds[0];
+                    pdbMapping = {
+                        pdbId: query.toLowerCase(),
+                        uniprotId: searchQuery
+                    };
+                }
+
+                // Call the actual search API
+                const response = await searchStructures({
+                    query: searchQuery,
+                    limit: 10,
+                    superposition: true
+                });
+                
+                // Only update with results if we have them
+                if (response.results && response.results.length > 0) {
+                    this.state$.next({
+                        ...this.state$.value,
+                        input: {
+                            ...this.state$.value.input,
+                            pdbMapping // Store the mapping if we have it
+                        },
+                        results: {
+                            items: response.results,
+                            selectedResult: null
+                        },
+                        status: {
+                            isSearching: false,
+                            validationError: null
+                        }
+                    });
+                } else {
+                    // Keep results cleared and set error
+                    this.state$.next({
+                        ...this.state$.value,
+                        results: {
+                            items: [],
+                            selectedResult: null
+                        },
+                        status: {
+                            isSearching: false,
+                            validationError: 'No results found'
+                        }
+                    });
+                }
+            } else {
+                // For other search types, proceed with direct search
+                const response = await searchStructures({
+                    query,
+                    limit: 10,
+                    superposition: true
+                });
+                
+                if (response.results && response.results.length > 0) {
+                    this.state$.next({
+                        ...this.state$.value,
+                        results: {
+                            items: response.results,
+                            selectedResult: null
+                        },
+                        status: {
+                            isSearching: false,
+                            validationError: null
+                        }
+                    });
+                } else {
+                    // Keep results cleared and set error
+                    this.state$.next({
+                        ...this.state$.value,
+                        results: {
+                            items: [],
+                            selectedResult: null
+                        },
+                        status: {
+                            isSearching: false,
+                            validationError: 'No results found'
+                        }
+                    });
+                }
+            }
         } catch (error) {
-            this.setSearchStatus({ 
-                validationError: error instanceof Error ? error.message : 'An error occurred'
+            // Keep results cleared and set error
+            this.state$.next({
+                ...this.state$.value,
+                results: {
+                    items: [],
+                    selectedResult: null
+                },
+                status: {
+                    isSearching: false,
+                    validationError: error instanceof Error ? error.message : 'An error occurred'
+                }
             });
             throw error;
-        } finally {
-            this.setSearchStatus({ isSearching: false });
         }
     }
 

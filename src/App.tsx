@@ -21,7 +21,8 @@ function useAppState(searchModel: SearchModel, mvsModel: MVSModel) {
         search: {
             results: useObservable(searchModel.selectors.results.items(), []),
             query: useObservable(searchModel.selectors.input.query(), null),
-            selectedResult: useObservable(searchModel.selectors.results.selectedResult(), null)
+            selectedResult: useObservable(searchModel.selectors.results.selectedResult(), null),
+            pdbMapping: useObservable(searchModel.selectors.input.pdbMapping(), null)
         },
         mvs: {
             story: useObservable(mvsModel.selectors.story.current(), null)
@@ -52,10 +53,19 @@ export function App() {
     useEffect(() => {
         console.log('[App] Updating MVS from search:', {
             query: state.search.query,
-            resultCount: state.search.results.length
+            resultCount: state.search.results.length,
+            pdbMapping: state.search.pdbMapping
         });
-        mvsModel.updateFromSearchResults(state.search.query, state.search.results);
-    }, [mvsModel, state.search.query, state.search.results]);
+        
+        // If we have a PDB mapping, use the UniProt ID for MVS
+        const queryId = state.search.pdbMapping?.uniprotId || state.search.query;
+        
+        mvsModel.updateFromSearchResults(
+            queryId, 
+            state.search.results,
+            { pdbId: null } // Don't pass PDB ID since we want to use AlphaFold URL
+        );
+    }, [mvsModel, state.search.query, state.search.results, state.search.pdbMapping]);
     
     // Debug MVS state
     useEffect(() => {
@@ -103,7 +113,11 @@ export function App() {
                     
                     <div className="panel results-panel">
                         <div className="panel-header">
-                            Results{state.search.query ? ` for ${state.search.query}` : ''}
+                            Results{state.search.query ? ` for ${state.search.query}${
+                                state.search.pdbMapping 
+                                    ? ` → ${state.search.pdbMapping.uniprotId}`
+                                    : ''
+                            }` : ''}
                         </div>
                         <div className="panel-content">
                             <SearchResults model={searchModel} mvsModel={mvsModel} />

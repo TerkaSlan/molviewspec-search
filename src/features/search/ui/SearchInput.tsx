@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { SearchType } from '../types';
 import { defaultQuery } from '../examples/preloaded';
 import { SearchModel } from '../models/SearchModel';
@@ -14,56 +14,65 @@ interface SearchInputProps {
 }
 
 export function SearchInput({
-    value,
-    searchType,
+    value: modelValue,
+    searchType: modelSearchType,
     isLoading,
     error,
     onSearch,
     onClear,
     model
 }: SearchInputProps) {
+    // Local state for input value and search type
+    const [inputValue, setInputValue] = useState(modelValue || '');
+    const [localSearchType, setLocalSearchType] = useState(modelSearchType);
+
+    // Update local state when model value changes
+    useEffect(() => {
+        setInputValue(modelValue || '');
+    }, [modelValue]);
+
+    useEffect(() => {
+        setLocalSearchType(modelSearchType);
+    }, [modelSearchType]);
+
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
-        onSearch(value || defaultQuery, searchType);
-    }, [value, searchType, onSearch]);
+        onSearch(inputValue || defaultQuery, localSearchType);
+    }, [inputValue, localSearchType, onSearch]);
 
     const handleClear = useCallback(() => {
+        setInputValue('');
         model.clearSearch();
         onClear();
     }, [model, onClear]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
+        const newValue = e.target.value;
         // Only clear validation error when input changes
         if (error) {
             model.setValidationError(null);
         }
-        model.setSearchInput({ 
-            query: value || defaultQuery,
-            searchType 
-        });
-    }, [model, searchType, error]);
+        setInputValue(newValue || defaultQuery);
+    }, [error, model]);
 
     const handleSearchTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-        model.setSearchInput({
-            query: value || defaultQuery,
-            searchType: e.target.value as SearchType
-        });
-    }, [model, value]);
+        const newSearchType = e.target.value as SearchType;
+        setLocalSearchType(newSearchType);
+    }, []);
 
     return (
         <form onSubmit={handleSubmit} className="search-form">
             <div className="search-input-container">
                 <input
                     type="text"
-                    value={value}
+                    value={inputValue}
                     onChange={handleInputChange}
                     placeholder="Enter PDB ID or UniProt ID"
                     disabled={isLoading}
-                    className={`search-input ${error ? 'error' : ''} ${value === defaultQuery ? 'default-query' : ''}`}
+                    className={`search-input ${error ? 'error' : ''} ${inputValue === defaultQuery ? 'default-query' : ''}`}
                 />
                 <select
-                    value={searchType}
+                    value={localSearchType}
                     onChange={handleSearchTypeChange}
                     disabled={isLoading}
                     className="search-type-select"
@@ -76,7 +85,7 @@ export function SearchInput({
             <div className="search-actions">
                 <button
                     type="submit"
-                    disabled={isLoading || !value || error !== null}
+                    disabled={isLoading || !inputValue || error !== null}
                     className="search-button"
                 >
                     {isLoading ? 'Searching...' : 'Search'}
@@ -84,7 +93,7 @@ export function SearchInput({
                 <button
                     type="button"
                     onClick={handleClear}
-                    disabled={isLoading || !value}
+                    disabled={isLoading || !inputValue}
                     className="clear-button"
                 >
                     Clear

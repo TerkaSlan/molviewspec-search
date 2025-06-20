@@ -9,6 +9,7 @@ interface SuperpositionMolecularVisualizationConfig {
   targetProteinColor: string;
   rotation_matrix?: number[][];
   translation_vector?: number[];
+  originalPdbId?: string | null; // Keep track of original PDB ID for display only
 }
 
 const createInitialJavaScriptCode = (config: SuperpositionMolecularVisualizationConfig): string => {
@@ -51,8 +52,12 @@ targetStructure
   return code;
 };
 
-export const createMultiSceneStory = (queryProteinId: string, results: SuperpositionData[]): Story => ({
-  metadata: { title: `Structure ${queryProteinId.toUpperCase()} - Multiple Alignments` },
+export const createMultiSceneStory = (queryProteinId: string, results: SuperpositionData[], originalPdbId?: string | null): Story => ({
+  metadata: { 
+    title: originalPdbId 
+      ? `Structure ${originalPdbId.toUpperCase()} (AlphaFold: ${queryProteinId}) - Multiple Alignments` 
+      : `Structure ${queryProteinId.toUpperCase()} - Multiple Alignments`
+  },
   javascript: '// Common code for all scenes\n',
   scenes: results.map((result, index) => ({
     id: UUID.createv4(),
@@ -60,14 +65,15 @@ export const createMultiSceneStory = (queryProteinId: string, results: Superposi
     key: `scene_${result.object_id}`,
     result,
     description:
-      `Superposition of **${queryProteinId.toUpperCase()}** and **${result.object_id.toUpperCase()}**.\n\nAlignment metrics:\n- RMSD: ${result.rmsd.toFixed(2)}\n- TM-score: ${result.tm_score.toFixed(4)}\n- Aligned: ${(result.aligned_percentage * 100).toFixed(1)}%`,
+      `Superposition of **${originalPdbId ? `${originalPdbId.toUpperCase()} (AlphaFold: ${queryProteinId})` : queryProteinId.toUpperCase()}** and **${result.object_id.toUpperCase()}**.\n\nAlignment metrics:\n- RMSD: ${result.rmsd.toFixed(2)}\n- TM-score: ${result.tm_score.toFixed(4)}\n- Aligned: ${(result.aligned_percentage * 100).toFixed(1)}%`,
     javascript: createInitialJavaScriptCode({
       queryProteinColor: 'green',
       targetProteinColor: 'blue',
       queryProteinId: queryProteinId,
       targetProteinId: result.object_id,
       rotation_matrix: result.rotation_matrix,
-      translation_vector: result.translation_vector
+      translation_vector: result.translation_vector,
+      originalPdbId
     }),
     data: result
   })),
