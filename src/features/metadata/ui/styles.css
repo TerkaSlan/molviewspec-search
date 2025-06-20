@@ -1,0 +1,74 @@
+.metadata-container {
+    width: 100%;
+    padding: 0.5rem;
+}
+
+.metadata-sections-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.metadata-section {
+    flex: 1;
+    min-width: 0; /* Prevents flex items from overflowing */
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 2px;
+}
+
+.metadata-section h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0rem;
+    padding: 0rem 0;
+}
+
+.metric .label {
+    color: #666;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.metric .value {
+    text-align: right;
+    word-break: break-word;
+}
+
+.links {
+    margin-top: 0rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #ddd;
+}
+
+.links a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.links a:hover {
+    text-decoration: underline;
+}
+
+.error {
+    color: #dc3545;
+    margin: 0.5rem 0;
+}
+
+.no-selection {
+    color: #666;
+    font-style: italic;
+} 

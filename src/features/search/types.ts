@@ -91,4 +91,14 @@ export interface SearchOptions extends Partial<AlphaFindSearchOptions> {
 export interface FoldseekSearchOptions extends AlphaFindSearchOptions {
     searchType: 'foldseek';
     fastaSequence?: string;
+}
+
+export interface SearchInput {
+    query: string | null;
+    searchType: SearchType;
+    pdbMapping: {
+        pdbId: string;
+        uniprotId: string;
+    } | null;
+    inputType: 'pdb' | 'uniprot' | 'invalid' | null;
 } 

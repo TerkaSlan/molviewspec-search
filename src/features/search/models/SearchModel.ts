@@ -17,6 +17,7 @@ interface SearchInput {
         pdbId: string;
         uniprotId: string;
     } | null;
+    inputType: string | null;
 }
 
 interface SearchResults {
@@ -39,7 +40,8 @@ const initialState: SearchState = {
     input: {
         query: null,
         searchType: 'alphafind',
-        pdbMapping: null
+        pdbMapping: null,
+        inputType: null
     },
     status: {
         isSearching: false,
@@ -122,17 +124,15 @@ export class SearchModel extends ReactiveModel {
             lastProcessedMVSResult: () => this.getStateProperty$('lastProcessedMVSResult')
         },
         input: {
-            query: () => this.getStateProperty$('input').pipe(
-                map(input => input.query),
-                distinctUntilChanged()
-            ),
-            searchType: () => this.getStateProperty$('input').pipe(
-                map(input => input.searchType),
-                distinctUntilChanged()
-            ),
+            query: () => this.getStateProperty$('input').pipe(map(input => input.query)),
+            searchType: () => this.getStateProperty$('input').pipe(map(input => input.searchType)),
             pdbMapping: () => this.getStateProperty$('input').pipe(
                 map(input => input.pdbMapping),
                 distinctUntilChanged((prev, curr) => deepEqual(prev, curr))
+            ),
+            inputType: () => this.getStateProperty$('input').pipe(
+                map(input => input.inputType),
+                distinctUntilChanged()
             )
         },
         results: {
@@ -254,7 +254,8 @@ export class SearchModel extends ReactiveModel {
                 ...this.state$.value.input,
                 query,
                 searchType,
-                pdbMapping: null // Reset mapping
+                pdbMapping: null, // Reset mapping
+                inputType: null // Reset input type
             },
             results: {
                 items: [],
@@ -270,6 +271,15 @@ export class SearchModel extends ReactiveModel {
             if (searchType === 'alphafind') {
                 // First determine input type
                 const inputType = await determineInputType(query);
+                
+                // Update input type in state
+                this.state$.next({
+                    ...this.state$.value,
+                    input: {
+                        ...this.state$.value.input,
+                        inputType
+                    }
+                });
                 
                 if (inputType === 'invalid') {
                     // Keep results cleared and set error
@@ -329,7 +339,7 @@ export class SearchModel extends ReactiveModel {
                         ...this.state$.value,
                         input: {
                             ...this.state$.value.input,
-                            pdbMapping // Store the mapping if we have it
+                            pdbMapping, // Store the mapping if we have it
                         },
                         results: {
                             items: response.results,

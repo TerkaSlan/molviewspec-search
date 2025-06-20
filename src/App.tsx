@@ -6,7 +6,7 @@ import { MVSModel } from './features/mvs/models/MVSModel';
 import { useReactiveModel } from './lib/hooks/use-reactive-model';
 import { useObservable } from './lib/hooks/use-observable';
 import { Story } from './features/types';
-import { MetadataContainer } from './features/search/MetadataContainer';
+import { MetadataContainer } from './features/metadata/MetadataContainer';
 import { preloadedResults, defaultQuery } from './features/search/examples/preloaded';
 
 /**
@@ -133,7 +133,7 @@ export function App() {
             <div className="bottom-panel panel">
                 <div className="panel-header">Structure Info</div>
                 <div className="panel-content">
-                    <MetadataContainer model={searchModel} mvsModel={mvsModel} />
+                    <MetadataContainer searchModel={searchModel} mvsModel={mvsModel} />
                 </div>
             </div>
         </div>
