@@ -75,11 +75,15 @@ export class MVSModel extends ReactiveModel {
         });
     }
 
-    updateFromSearchResults(query: string | null, results: SuperpositionData[]) {
-        console.log('[MVSModel] Updating from search results:', { query, resultCount: results.length });
+    updateFromSearchResults(query: string | null, results: SuperpositionData[], options?: { pdbId?: string | null }) {
+        console.log('[MVSModel] Updating from search results:', { 
+            query, 
+            resultCount: results.length,
+            pdbId: options?.pdbId 
+        });
         
         const story = query && results.length > 0
-            ? createMultiSceneStory(query, results)
+            ? createMultiSceneStory(query, results, options?.pdbId)
             : null;
 
         console.log('[MVSModel] Created story:', {

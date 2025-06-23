@@ -16,7 +16,9 @@ export function SearchContainer({ model }: SearchContainerProps) {
     // Subscribe to grouped state
     const { query, searchType } = useObservable(model.selectors.search.input(), {
         query: null,
-        searchType: 'alphafind' as SearchType
+        searchType: 'alphafind' as SearchType,
+        pdbMapping: null,
+        inputType: 'uniprot'
     });
     const { isSearching, validationError } = useObservable(model.selectors.search.status(), {
         isSearching: false,
