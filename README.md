@@ -1,9 +1,11 @@
-# Mol* MolViewSpec Search Demo
+# Mol* MolViewSpec Search
 
 [![DOI](https://zenodo.org/badge/983983402.svg)](https://doi.org/10.5281/zenodo.15489496)
 [![Node.js CI](https://github.com/TerkaSlan/molviewspec-search/actions/workflows/test.yaml/badge.svg)](https://github.com/TerkaSlan/molviewspec-search/actions/workflows/test.yaml)
 
 This React application demonstrates programmatic creation of [MolViewSpec (MVS)](https://molstar.org/mol-view-spec-docs/mvs-molstar-extension/) files for molecular visualization with [Mol*](https://molstar.org/).
+
+![image](doc/image.png)
 
 ## Features
 
